@@ -1,0 +1,937 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <!-- iPad & Wacom PWA / Vollbild-Meta-Tags (Kein Browser-Pinch-Zoom auf der UI) -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="WebNotes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#2b579a">
+    <meta name="format-detection" content="telephone=no">
+    <title>WebNotes – Tafelheft &amp; Notizen</title>
+    <link rel="stylesheet" href="style.css?v=20261119_5">
+</head>
+<body class="no-select">
+
+    <!-- ===================================================================
+         1. DASHBOARD VIEW (ORDNER & HEFTE IM GOODNOTES-STIL)
+    ==================================================================== -->
+    <section id="dashboard-view" class="view-container">
+        <header class="dashboard-header">
+            <div class="dash-brand">
+                <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                </svg>
+                <span class="dash-title">WebNotes Dokumente</span>
+            </div>
+
+            <div class="dash-search-wrap">
+                <svg class="search-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <input type="search" id="dash-search-input" class="dash-search-input" placeholder="Hefte durchsuchen...">
+            </div>
+
+            <div class="dash-actions">
+                <span id="dash-sync-badge" class="sync-badge status-saved" title="Synchronisations-Status">
+                    <span class="sync-dot"></span>
+                    <span class="sync-text">Verbunden ✓</span>
+                </span>
+                <button type="button" id="btn-new-folder" class="btn btn-header-ghost" title="Neuen Ordner anlegen">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                        <line x1="12" y1="11" x2="12" y2="17"></line>
+                        <line x1="9" y1="14" x2="15" y2="14"></line>
+                    </svg>
+                    <span>Neuer Ordner</span>
+                </button>
+                <button type="button" id="btn-new-notebook" class="btn btn-header-white" title="Neues Heft erstellen">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                    <span>Neues Heft</span>
+                </button>
+                <button type="button" id="btn-open-settings" class="icon-btn-header" title="Passwort &amp; Bibliotheken prüfen">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                    </svg>
+                </button>
+            </div>
+        </header>
+
+        <div class="dashboard-body">
+            <!-- Linke Ordner-Spalte -->
+            <aside class="folders-sidebar">
+                <div class="sidebar-section-header">
+                    <span>ORDNER</span>
+                </div>
+                <ul id="folder-list" class="folder-list">
+                    <!-- Dynamisch gerendert: Alle Hefte + Benutzer-Ordner -->
+                </ul>
+            </aside>
+
+            <!-- Rechtes Heft-Grid -->
+            <main class="notebooks-main">
+                <div class="notebooks-toolbar">
+                    <div class="current-folder-info">
+                        <h1 id="current-folder-title">Alle Hefte</h1>
+                        <span id="current-folder-count" class="folder-count-badge">0 Hefte</span>
+                    </div>
+                    <div class="notebooks-sort">
+                        <label for="sort-notebooks-select">Sortierung:</label>
+                        <select id="sort-notebooks-select" class="form-select-sm">
+                            <option value="modified_desc">Zuletzt bearbeitet</option>
+                            <option value="title_asc">Name (A–Z)</option>
+                            <option value="created_desc">Erstelldatum</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="notebooks-grid" class="notebooks-grid">
+                    <!-- Dynamisch gerenderte Heft-Karten mit Live-Cover-Vorschau + "+ Neues Heft"-Karte -->
+                </div>
+            </main>
+        </div>
+    </section>
+
+    <!-- ===================================================================
+         3. EDITOR VIEW (ZWEI-EBENEN-HEADER, SIDEBAR & MULTI-LAYER-CANVAS)
+    ==================================================================== -->
+    <section id="editor-view" class="view-container hidden">
+
+        <!-- PALM-SHIELD OVERLAY FÜR DIE TOOLBAR & SIDEBAR WÄHREND STIFT-EINGABE -->
+        <header id="editor-header" class="editor-header palm-shield-zone">
+
+            <!-- OBEN: DUNKELBLAUE HAUPTLEISTE (#2b579a) -->
+            <div class="top-bar">
+                <!-- Links: Zurück, Sidebar-Toggle, Hefttitel, Undo/Redo -->
+                <div class="top-bar-left">
+                    <button type="button" id="btn-back-dashboard" class="top-icon-btn" title="Zurück zum Ordner-Dashboard">
+                        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="15 18 9 12 15 6"></polyline>
+                        </svg>
+                    </button>
+
+                    <button type="button" id="btn-toggle-sidebar" class="top-icon-btn active" title="Seitenleiste (Miniaturansichten) ein-/ausblenden">
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                            <line x1="9" y1="3" x2="9" y2="21"></line>
+                        </svg>
+                    </button>
+
+                    <div class="notebook-title-wrap">
+                        <input type="text" id="editor-notebook-title" class="notebook-title-input" value="5 NTB – Natur und Technik" title="Hefttitel klicken zum Umbenennen" spellcheck="false">
+                    </div>
+
+                    <div class="top-divider"></div>
+
+                    <button type="button" id="btn-undo" class="top-icon-btn" title="Rückgängig (Strg+Z)" disabled>
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M9 14L4 9l5-5"></path>
+                            <path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5v0a5.5 5.5 0 0 1-5.5 5.5H11"></path>
+                        </svg>
+                    </button>
+                    <button type="button" id="btn-redo" class="top-icon-btn" title="Wiederherstellen (Strg+Y)" disabled>
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M15 14l5-5-5-5"></path>
+                            <path d="M20 9H9.5A5.5 5.5 0 0 0 4 14.5v0A5.5 5.5 0 0 0 9.5 20H13"></path>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Mitte: Hauptwerkzeuge (ohne Mikrofon/Audio!) -->
+                <div class="top-bar-center" role="toolbar" aria-label="Hauptwerkzeuge">
+                    <!-- 1. Lasso-Auswahl -->
+                    <button type="button" class="tool-btn" data-tool="lasso" title="Lasso-Auswahl (Verschieben, Skalieren, Umfärben, Duplizieren)">
+                        <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M7 22a5 5 0 0 1-2-4"></path>
+                            <path d="M3.3 14A6.8 6.8 0 0 1 2 10c0-4.4 4.5-8 10-8s10 3.6 10 8-4.5 8-10 8a12 12 0 0 1-5-1"></path>
+                            <circle cx="5" cy="18" r="2"></circle>
+                        </svg>
+                    </button>
+
+                    <!-- 2. Stift (Aktiviert Kontext-Leiste für Kugelschreiber / Marker / Formen) -->
+                    <button type="button" class="tool-btn active" data-tool="pen" title="Stift &amp; Textmarker (Wacom Pro Pen 2 / Apple Pencil)">
+                        <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path>
+                            <path d="m15 5 4 4"></path>
+                        </svg>
+                    </button>
+
+                    <!-- 3. Radierer -->
+                    <button type="button" class="tool-btn" data-tool="eraser" title="Radierer (Klick für Strich- oder Teil-Radierer)">
+                        <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"></path>
+                            <path d="M22 21H7"></path>
+                            <path d="m5 11 9 9"></path>
+                        </svg>
+                    </button>
+
+                    <!-- 4. Textfeld / Sprechblase -->
+                    <button type="button" class="tool-btn" data-tool="text" title="Textfeld &amp; Sprechblase einfügen">
+                        <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="4 7 4 4 20 4 20 7"></polyline>
+                            <line x1="9" y1="20" x2="15" y2="20"></line>
+                            <line x1="12" y1="4" x2="12" y2="20"></line>
+                        </svg>
+                    </button>
+
+                    <!-- 5. Bild einfügen & bearbeiten -->
+                    <button type="button" class="tool-btn" id="btn-tool-image" data-tool="image" title="Bild einfügen &amp; bearbeiten (Antippen, Verschieben, Skalieren, Drehen, Strg+V)">
+                        <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                            <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                            <polyline points="21 15 16 10 5 21"></polyline>
+                        </svg>
+                    </button>
+
+                    <!-- 7. Formen-Werkzeug -->
+                    <button type="button" class="tool-btn" data-tool="shapes" title="Geometrische Formen, Pfeile, Koordinatensystem &amp; Sprechblasen">
+                        <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="3" width="9" height="9" rx="1"></rect>
+                            <circle cx="16.5" cy="16.5" r="5.5"></circle>
+                        </svg>
+                    </button>
+
+                    <!-- 8. Seiten-Vorlage / Papierwahl -->
+                    <button type="button" class="tool-btn" id="btn-paper-template" title="Papierfarbe, Lineatur &amp; Cover-Vorlage dieser Seite ändern">
+                        <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <line x1="8" y1="13" x2="16" y2="13"></line>
+                            <line x1="8" y1="17" x2="16" y2="17"></line>
+                        </svg>
+                    </button>
+
+                    <!-- 9. Laserpointer -->
+                    <button type="button" class="tool-btn" data-tool="laser" title="Laserpointer für Beamer-Präsentation (Leuchtspur verblasst automatisch)">
+                        <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="3" fill="currentColor"></circle>
+                            <circle cx="12" cy="12" r="8" stroke-dasharray="3 3"></circle>
+                            <line x1="12" y1="1" x2="12" y2="3"></line>
+                            <line x1="12" y1="21" x2="12" y2="23"></line>
+                            <line x1="1" y1="12" x2="3" y2="12"></line>
+                            <line x1="21" y1="12" x2="23" y2="12"></line>
+                        </svg>
+                    </button>
+
+                    <!-- 10. Interaktives Lineal -->
+                    <button type="button" class="tool-btn" id="btn-toggle-ruler" title="Interaktives Lineal ein-/ausblenden (mit Wacom-Kanten-Einrasten &amp; Winkelanzeige)">
+                        <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21.3 15.3a2.4 2.4 0 0 1 0 3.4l-2.6 2.6a2.4 2.4 0 0 1-3.4 0L2.7 8.7a2.41 2.41 0 0 1 0-3.4l2.6-2.6a2.41 2.41 0 0 1 3.4 0Z"></path>
+                            <path d="m14.5 12.5 2-2"></path>
+                            <path d="m11.5 9.5 2-2"></path>
+                            <path d="m8.5 6.5 2-2"></path>
+                            <path d="m17.5 15.5 2-2"></path>
+                        </svg>
+                    </button>
+
+                    <!-- 11. Schwebende Unterrichts-Widgets (Uhr / Stoppuhr / Countdown – nicht im PDF) -->
+                    <button type="button" class="tool-btn" id="btn-toggle-widgets" title="Unterrichts-Widgets einfügen (Uhr, Stoppuhr, Countdown, Ampel – bleiben fest &amp; erscheinen nicht im PDF)">
+                        <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="13" r="8"></circle>
+                            <polyline points="12 9 12 13 15 15"></polyline>
+                            <line x1="9" y1="2" x2="15" y2="2"></line>
+                            <line x1="12" y1="2" x2="12" y2="5"></line>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Rechts: Sync-Badge, Sync prüfen, + Seite, PDF-Import, 300-DPI PDF-Export -->
+                <div class="top-bar-right">
+                    <div id="editor-sync-badge" class="sync-badge status-saved" title="Speicher- &amp; Offline-Queue-Status">
+                        <span class="sync-dot"></span>
+                        <span id="editor-sync-text" class="sync-text">Gespeichert ✓</span>
+                    </div>
+
+                    <button type="button" id="btn-poll-sync" class="top-icon-btn" title="Sync vom Server prüfen (Änderungen von iPad / PC abrufen)">
+                        <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="23 4 23 10 17 10"></polyline>
+                            <polyline points="1 20 1 14 7 14"></polyline>
+                            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                        </svg>
+                    </button>
+
+                    <button type="button" id="btn-add-page-top" class="top-icon-btn" title="Neue Seite nach der aktuellen Seite einfügen (+)">
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <line x1="12" y1="11" x2="12" y2="17"></line>
+                            <line x1="9" y1="14" x2="15" y2="14"></line>
+                        </svg>
+                    </button>
+
+                    <button type="button" id="btn-import-pdf" class="top-action-pill" title="PDF-Arbeitsblatt importieren (hochauflösend als Seiten-Hintergründe)">
+                        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="17 8 12 3 7 8"></polyline>
+                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                        </svg>
+                        <span>PDF-Import</span>
+                    </button>
+
+                    <button type="button" id="btn-export-pdf" class="top-action-pill export-pill" title="Verlustfreier 300-DPI PDF-Export des gesamten Heftes">
+                        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="7 10 12 15 17 10"></polyline>
+                            <line x1="12" y1="15" x2="12" y2="3"></line>
+                        </svg>
+                        <span>PDF-Export</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- UNTEN: GRÜNE KONTEXT-LEISTE (#6ea864) MIT ABGERUNDETER WEISSER FLOATING PILL -->
+            <div class="sub-bar">
+                <div class="floating-pill" id="context-pill">
+
+                    <!-- Links in der Pill: Kugelschreiber (Standard), Textmarker (Highlighter), Formen-Modus -->
+                    <div class="pill-section pill-pen-modes" id="pill-pen-modes">
+                        <button type="button" class="submode-btn active" data-submode="ballpoint" title="Kugelschreiber (konstante Wacom-Strichbreite, Bézier-geglättet)">
+                            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M12 19l7-7 3 3-7 7-3-3z"></path>
+                                <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"></path>
+                                <path d="M2 2l7.586 7.586"></path>
+                            </svg>
+                            <span>Stift</span>
+                        </button>
+
+                        <button type="button" class="submode-btn" data-submode="highlighter" title="Textmarker (Multiply-Blending 35%, kein Selbst-Abdunkeln innerhalb eines Zuges)">
+                            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="m9 11-6 6v3h9l3-3"></path>
+                                <path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4"></path>
+                            </svg>
+                            <span>Marker</span>
+                        </button>
+
+                        <button type="button" class="submode-btn" data-submode="shape_draw" title="Formen-Modus (Direktes Zeichnen von Linien, Rechtecken, Kreisen &amp; Pfeilen)">
+                            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+                                <polygon points="12 2 2 22 22 22 12 2"></polygon>
+                            </svg>
+                            <span>Formen</span>
+                        </button>
+
+                        <button type="button" class="submode-btn" data-submode="lab" title="Chemie-Labor (Chemix-Baukasten: Gefäße, Flüssigkeiten, Ausguss, Brenner, Stative)">
+                            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M9 3h6"></path>
+                                <path d="M10 3v6.2L4.8 18.6A2 2 0 0 0 6.5 21.5h11a2 2 0 0 0 1.7-2.9L14 9.2V3"></path>
+                                <path d="M7.5 15.5h9"></path>
+                            </svg>
+                            <span>Labor</span>
+                        </button>
+                    </div>
+
+                    <div class="pill-divider"></div>
+
+                    <!-- Mitte in der Pill: 3 frei belegbare Strichstärken-Slots -->
+                    <div class="pill-section pill-stroke-widths" id="pill-stroke-widths">
+                        <button type="button" class="width-slot-btn" data-slot="0" title="Strichstärke Slot 1 (Klick zum Auswählen, nochmaliger Klick zum Feinjustieren)">
+                            <span class="width-line-preview" id="width-preview-0" style="height: 2px;"></span>
+                            <span class="width-slot-val" id="width-val-0">2.2</span>
+                        </button>
+                        <button type="button" class="width-slot-btn active" data-slot="1" title="Strichstärke Slot 2 (Klick zum Auswählen, nochmaliger Klick zum Feinjustieren)">
+                            <span class="width-line-preview" id="width-preview-1" style="height: 4px;"></span>
+                            <span class="width-slot-val" id="width-val-1">4.0</span>
+                        </button>
+                        <button type="button" class="width-slot-btn" data-slot="2" title="Strichstärke Slot 3 (Klick zum Auswählen, nochmaliger Klick zum Feinjustieren)">
+                            <span class="width-line-preview" id="width-preview-2" style="height: 8px;"></span>
+                            <span class="width-slot-val" id="width-val-2">8.5</span>
+                        </button>
+                    </div>
+
+                    <div class="pill-divider"></div>
+
+                    <!-- Rechts in der Pill: Farb-Slots (Schwarz, Blau, Grün, Rot, Hellblau, Lila + Custom-Color-Slot) -->
+                    <div class="pill-section pill-colors" id="pill-colors">
+                        <button type="button" class="color-swatch active" data-color="#111827" style="--swatch-color: #111827;" title="Tiefschwarz"></button>
+                        <button type="button" class="color-swatch" data-color="#0066ff" style="--swatch-color: #0066ff;" title="Schulblau (#0066ff)"></button>
+                        <button type="button" class="color-swatch" data-color="#68b82e" style="--swatch-color: #68b82e;" title="Tafelgrün (#68b82e)"></button>
+                        <button type="button" class="color-swatch" data-color="#ff0000" style="--swatch-color: #ff0000;" title="Korrekturrot (#ff0000)"></button>
+                        <button type="button" class="color-swatch" data-color="#0ea5e9" style="--swatch-color: #0ea5e9;" title="Hellblau (#0ea5e9)"></button>
+                        <button type="button" class="color-swatch" data-color="#9333ea" style="--swatch-color: #9333ea;" title="Violett / Lila (#9333ea)"></button>
+                        <label class="color-swatch custom-color-swatch" id="custom-color-label" style="--swatch-color: #f59e0b;" title="Eigene Farbe wählen (Custom Slot)">
+                            <input type="color" id="custom-color-input" value="#f59e0b">
+                        </label>
+                    </div>
+
+                    <!-- Optionales Kontext-Modul für Formen / Radierer / Text (blendet sich dynamisch dazu) -->
+                    <div id="pill-extra-controls" class="pill-section pill-extra hidden">
+                        <div class="pill-divider"></div>
+                        <!-- Radierer-Optionen -->
+                        <div id="eraser-options" class="extra-group hidden">
+                            <button type="button" class="chip-btn active" data-eraser-mode="stroke" title="Löscht den gesamten berührten Strich auf einmal">Strich-Radierer</button>
+                            <button type="button" class="chip-btn" data-eraser-mode="partial" title="Radiert präzise nur den übermalten Teilbereich">Teil-Radierer</button>
+                            <button type="button" id="btn-clear-page" class="chip-btn chip-danger" title="Alle eigenen Striche auf dieser Seite löschen">Seite leeren</button>
+                        </div>
+                        <!-- Geometrische Formen-Auswahl -->
+                        <div id="shape-options" class="extra-group hidden">
+                            <button type="button" class="chip-btn active" data-shape-type="line" title="Gerade Linie">Linie</button>
+                            <button type="button" class="chip-btn" data-shape-type="arrow" title="Pfeil">Pfeil</button>
+                            <button type="button" class="chip-btn" data-shape-type="rect" title="Rechteck / Kasten">Rechteck</button>
+                            <button type="button" class="chip-btn" data-shape-type="ellipse" title="Kreis / Ellipse">Kreis</button>
+                            <button type="button" class="chip-btn" data-shape-type="callout" title="Sprechblase">Sprechblase</button>
+                            <button type="button" class="chip-btn" data-shape-type="axes" title="Koordinatensystem (Achsenkreuz)">Achsenkreuz</button>
+                        </div>
+                        <!-- Bild-Werkzeug Optionen -->
+                        <div id="image-options" class="extra-group hidden">
+                            <button type="button" id="btn-img-upload" class="chip-btn active" title="Neues Bild aus Datei wählen">+ Bild wählen</button>
+                            <button type="button" id="btn-img-rotate90" class="chip-btn" title="Ausgewähltes Bild um 90° drehen">↻ 90°</button>
+                            <button type="button" id="btn-img-delete" class="chip-btn chip-danger" title="Ausgewähltes Bild löschen">Bild löschen</button>
+                        </div>
+                        <!-- Labor-Baukasten Optionen -->
+                        <div id="lab-options" class="extra-group hidden">
+                            <button type="button" id="btn-lab-open-catalog" class="chip-btn active" title="Laborgeräte-Katalog öffnen / schließen">⚗️ Geräte-Katalog</button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- POPOVER: STRICHSTÄRKE FEINJUSTIEREN -->
+            <div id="width-popover" class="floating-popover hidden">
+                <div class="popover-title">Strichstärke Slot <span id="width-popover-slot-num">1</span> anpassen</div>
+                <div class="width-slider-row">
+                    <input type="range" id="width-slider-input" min="1" max="42" step="0.5" value="4">
+                    <span id="width-slider-label" class="width-slider-value">4.0 px</span>
+                </div>
+                <div class="width-presets-row">
+                    <button type="button" class="preset-chip" data-preset-w="1.8">Fein (1.8)</button>
+                    <button type="button" class="preset-chip" data-preset-w="3.5">Standard (3.5)</button>
+                    <button type="button" class="preset-chip" data-preset-w="6.5">Tafel (6.5)</button>
+                    <button type="button" class="preset-chip" data-preset-w="18">Marker (18)</button>
+                    <button type="button" class="preset-chip" data-preset-w="30">Fläche (30)</button>
+                </div>
+            </div>
+            <!-- POPOVER: UNTERRICHTS-WIDGETS (NICHT IM PDF-EXPORT) -->
+            <div id="widget-menu-popover" class="floating-popover widget-menu-popover palm-shield-zone hidden">
+                <div class="popover-title">Unterrichts-Widgets <span class="widget-badge-nopdf">kein PDF-Export</span></div>
+                <div class="widget-menu-list">
+                    <button type="button" class="widget-menu-item" data-spawn-widget="timer">
+                        <span class="wm-icon">⏳</span>
+                        <span class="wm-text"><strong>Countdown-Timer</strong><small>Mit Uhr, Stoppuhr &amp; Gong</small></span>
+                    </button>
+                    <button type="button" class="widget-menu-item" data-spawn-widget="clock">
+                        <span class="wm-icon">🕒</span>
+                        <span class="wm-text"><strong>Aktuelle Uhrzeit</strong><small>Umschaltbar auf Stoppuhr/Timer</small></span>
+                    </button>
+                    <button type="button" class="widget-menu-item" data-spawn-widget="stopwatch">
+                        <span class="wm-icon">⏱️</span>
+                        <span class="wm-text"><strong>Stoppuhr</strong><small>Präzise Zeitmessung im Versuch</small></span>
+                    </button>
+                    <button type="button" class="widget-menu-item" data-spawn-widget="ampel">
+                        <span class="wm-icon">🚦</span>
+                        <span class="wm-text"><strong>Arbeitsphasen-Ampel</strong><small>Still-, Partner- &amp; Gruppenarbeit</small></span>
+                    </button>
+                    <button type="button" class="widget-menu-item" data-spawn-widget="random">
+                        <span class="wm-icon">🎲</span>
+                        <span class="wm-text"><strong>Zufallszahl</strong><small>Zufällige Auswahl (z. B. 1–28)</small></span>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- HAUPTBEREICH DES EDITORS: LINKE THUMBNAIL-SIDEBAR + CANVAS-STAGE -->
+        <div class="editor-workspace">
+
+            <!-- Linke Seitenleiste (~240px breit, #f2f3f5, 2-spaltiges Thumbnail-Grid) -->
+            <aside id="pages-sidebar" class="pages-sidebar palm-shield-zone">
+                <div class="pages-sidebar-header">
+                    <span class="sidebar-title">SEITEN</span>
+                    <div class="sidebar-header-actions">
+                        <button type="button" id="btn-sidebar-add-page" class="sidebar-mini-btn" title="Leere Seite nach aktiver Seite einfügen">
+                            + Seite
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 2-spaltiges Grid mit Live-Miniaturansichten -->
+                <div id="thumbnails-grid" class="thumbnails-grid">
+                    <!-- Dynamisch gerenderte Seiten-Karten (Thumbnail-Canvas + Seitenzahl + Aktionsmenü) -->
+                </div>
+            </aside>
+
+            <!-- Zentrale Zeichen-Bühne (Canvas-Viewport für Wacom Cintiq 22 & iPad) -->
+            <main id="canvas-viewport" class="canvas-viewport">
+                <div id="canvas-transform-stage" class="canvas-transform-stage">
+                    <div id="page-sheet-container" class="page-sheet-container">
+                        <!-- Layer 1: Papierfarbe, Vektor-Lineatur, Heft-Cover oder hochauflösendes PDF-Hintergrund-Asset -->
+                        <canvas id="bg-canvas" class="sheet-canvas layer-bg"></canvas>
+
+                        <!-- Layer 2: Haupt-Zeichenlayer (Alle Vektorpfade, Formen, Bilder, Textboxen & gespeicherte Multiply-Marker) -->
+                        <canvas id="main-canvas" class="sheet-canvas layer-main"></canvas>
+
+                        <!-- Layer 3: Aktiver Marker-Zug Overlay (mit CSS opacity: 0.35 & mix-blend-mode: multiply gegen Selbst-Abdunkeln!) -->
+                        <canvas id="highlighter-stroke-canvas" class="sheet-canvas layer-highlighter-active"></canvas>
+
+                        <!-- Layer 4: Interaktions- & UI-Overlay (Aktiver Stiftzug, Hold-to-Snap Gummiband, Lasso-Box, Laserpointer) -->
+                        <canvas id="ui-canvas" class="sheet-canvas layer-ui"></canvas>
+
+                        <!-- Interaktives Lineal (Verschieb- & drehbar auf der Seite) -->
+                        <div id="interactive-ruler" class="interactive-ruler hidden" style="transform: translate(180px, 320px) rotate(0deg);">
+                            <div class="ruler-ticks"></div>
+                            <div class="ruler-center-hud">
+                                <span id="ruler-angle-badge" class="ruler-angle-badge">0°</span>
+                                <button type="button" id="btn-ruler-snap-0" class="ruler-mini-btn" title="Auf 0° / 90° ausrichten">0°/90°</button>
+                            </div>
+                            <div id="ruler-rotate-handle" class="ruler-rotate-handle" title="Ziehen zum Drehen des Lineals">↻</div>
+                        </div>
+
+                        <!-- Schwebendes Lasso-Kontextmenü (erscheint über der Lasso-Bounding-Box) -->
+                        <div id="lasso-floating-bar" class="lasso-floating-bar hidden">
+                            <button type="button" id="lasso-btn-duplicate" class="lasso-action-btn" title="Auswahl duplizieren">Duplizieren</button>
+                            <button type="button" id="lasso-btn-recolor" class="lasso-action-btn" title="Mit aktueller Stiftfarbe umfärben">Umfärben</button>
+                            <button type="button" id="lasso-btn-front" class="lasso-action-btn" title="In den Vordergrund">Nach vorn</button>
+                            <button type="button" id="lasso-btn-delete" class="lasso-action-btn lasso-danger" title="Auswahl löschen (Entf)">Löschen</button>
+                        </div>
+
+                        <!-- Schwebende Bild-Aktionsleiste (Duplizieren & Mülleimer direkt am ausgewählten Bild) -->
+                        <div id="image-floating-bar" class="lasso-floating-bar image-floating-bar hidden">
+                            <button type="button" id="img-btn-duplicate" class="lasso-action-btn" title="Bild duplizieren">
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;">
+                                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                </svg>
+                            </button>
+                            <button type="button" id="img-btn-delete" class="lasso-action-btn lasso-danger" title="Bild löschen">
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;">
+                                    <polyline points="3 6 5 6 21 6"></polyline>
+                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                </svg>
+                            </button>
+                        </div>
+
+                        <!-- Inline Textfeld-Editor (für Textboxen & Sprechblasen) -->
+                        <div id="inline-text-editor-wrap" class="inline-text-editor-wrap hidden">
+                            <div class="inline-text-toolbar">
+                                <select id="text-font-size" class="text-tool-select" title="Schriftgröße">
+                                    <option value="18">Klein (18px)</option>
+                                    <option value="24" selected>Normal (24px)</option>
+                                    <option value="32">Groß (32px)</option>
+                                    <option value="44">Überschrift (44px)</option>
+                                </select>
+                                <label class="text-tool-check">
+                                    <input type="checkbox" id="text-has-box"> Rahmen
+                                </label>
+                                <label class="text-tool-check">
+                                    <input type="checkbox" id="text-has-Bubble"> Sprechblase
+                                </label>
+                                <button type="button" id="btn-text-commit" class="text-commit-btn">Übernehmen ✓</button>
+                            </div>
+                            <textarea id="inline-text-area" class="inline-text-area" placeholder="Text eingeben..."></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Schwebendes Seiten-Badge unten links ("Seite X von Y") + Schnellblättern -->
+                <div class="floating-page-badge palm-shield-zone">
+                    <button type="button" id="btn-prev-page" class="page-nav-btn" title="Vorherige Seite">‹</button>
+                    <span id="page-indicator-text">Seite 1 von 2</span>
+                    <button type="button" id="btn-next-page" class="page-nav-btn" title="Nächste Seite (oder neue Seite am Ende)">›</button>
+                </div>
+
+                <!-- Kompakte Zoom-Steuerung unten rechts (spart Platz in der grünen Kontext-Leiste für iPad) -->
+                <div class="zoom-controls palm-shield-zone">
+                    <button type="button" id="btn-zoom-out" class="zoom-btn" title="Verkleinern (-)">−</button>
+                    <button type="button" id="btn-zoom-reset" class="zoom-readout" title="Ganze Seite einpassen">100%</button>
+                    <button type="button" id="btn-zoom-in" class="zoom-btn" title="Vergrößern (+)">+</button>
+                    <span class="zoom-divider" aria-hidden="true"></span>
+                    <button type="button" id="btn-zoom-fit-width" class="zoom-fit-btn" title="Dokument auf Seitenbreite skalieren">
+                        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <polyline points="8 7 3 12 8 17"></polyline>
+                            <polyline points="16 7 21 12 16 17"></polyline>
+                            <line x1="3" y1="12" x2="21" y2="12"></line>
+                        </svg>
+                        <span>Breite</span>
+                    </button>
+                </div>
+
+                <!-- Schwebender Labor-Katalog (Chemix-Stil Geräte-Auswahl) -->
+                <aside id="lab-catalog-drawer" class="lab-floating-panel lab-catalog-drawer palm-shield-zone hidden">
+                    <div class="lab-panel-header">
+                        <span class="lab-panel-title">⚗️ Chemie-Labor</span>
+                        <button type="button" id="btn-close-lab-drawer" class="lab-panel-close" title="Katalog schließen">✕</button>
+                    </div>
+                    <div class="lab-cat-tabs">
+                        <button type="button" class="lab-cat-tab active" data-lab-cat="vessels">Gefäße</button>
+                        <button type="button" class="lab-cat-tab" data-lab-cat="heating">Heizen &amp; Stativ</button>
+                        <button type="button" class="lab-cat-tab" data-lab-cat="tools">Zubehör</button>
+                    </div>
+                    <div id="lab-catalog-grid" class="lab-catalog-grid">
+                        <!-- Dynamisch von lab.js gerendert -->
+                    </div>
+                </aside>
+
+                <!-- Schwebender Labor-Eigenschaften-Inspektor für das ausgewählte Gerät -->
+                <aside id="lab-inspector-panel" class="lab-floating-panel lab-inspector-panel palm-shield-zone hidden">
+                    <div class="lab-panel-header">
+                        <span id="lab-insp-title" class="lab-panel-title">Laborgerät</span>
+                        <button type="button" id="btn-close-lab-inspector" class="lab-panel-close" title="Auswahl aufheben">✕</button>
+                    </div>
+
+                    <div id="lab-insp-liquid-section" class="lab-insp-section">
+                        <div class="lab-insp-row-head">
+                            <label for="lab-insp-fill">Füllstand</label>
+                            <span id="lab-insp-fill-val" class="lab-insp-val">45%</span>
+                        </div>
+                        <input type="range" id="lab-insp-fill" class="lab-range" min="0" max="100" step="1" value="45">
+                        <div class="lab-insp-row-head" style="margin-top:8px;">
+                            <span>Farbe</span>
+                            <label class="lab-color-custom-wrap" title="Eigene Farbe wählen">
+                                <span>Eigene</span>
+                                <input type="color" id="lab-insp-color-custom" value="#38bdf8">
+                            </label>
+                        </div>
+                        <div id="lab-insp-colors" class="lab-swatch-grid"></div>
+                    </div>
+
+                    <div id="lab-insp-pour-section" class="lab-insp-section">
+                        <div class="lab-insp-row-head"><span>Ausguss beim Kippen</span></div>
+                        <div class="lab-chip-row">
+                            <button type="button" class="lab-mini-chip active" data-pour-mode="auto">Auto</button>
+                            <button type="button" class="lab-mini-chip" data-pour-mode="on">Immer</button>
+                            <button type="button" class="lab-mini-chip" data-pour-mode="off">Aus</button>
+                        </div>
+                    </div>
+
+                    <div id="lab-insp-effects-section" class="lab-insp-section">
+                        <div class="lab-insp-row-head"><span>Effekt (Dampf / Rauch / Blasen)</span></div>
+                        <div class="lab-chip-row">
+                            <button type="button" class="lab-mini-chip active" data-lab-effect="none">Kein</button>
+                            <button type="button" class="lab-mini-chip" data-lab-effect="steam">Dampf</button>
+                            <button type="button" class="lab-mini-chip" data-lab-effect="smoke">Rauch</button>
+                            <button type="button" class="lab-mini-chip" data-lab-effect="bubbles">Blasen</button>
+                            <button type="button" class="lab-mini-chip" data-lab-effect="steam_bubbles">Sieden</button>
+                        </div>
+                    </div>
+
+                    <div id="lab-insp-flame-section" class="lab-insp-section hidden">
+                        <div class="lab-insp-row-head"><span>Brenner-Flamme</span></div>
+                        <div class="lab-chip-row">
+                            <button type="button" class="lab-mini-chip" data-lab-flame="off">Aus</button>
+                            <button type="button" class="lab-mini-chip" data-lab-flame="yellow">Gelb</button>
+                            <button type="button" class="lab-mini-chip active" data-lab-flame="blue">Blau</button>
+                        </div>
+                    </div>
+
+                    <div id="lab-insp-label-section" class="lab-insp-section">
+                        <div class="lab-insp-row-head"><label for="lab-insp-label">Beschriftung / Wert</label></div>
+                        <input type="text" id="lab-insp-label" class="lab-text-input" maxlength="24" placeholder="z. B. HCl, NaOH, H₂O...">
+                    </div>
+
+                    <div class="lab-insp-actions">
+                        <button type="button" id="lab-insp-stopper" class="lab-action-chip" title="Gummistopfen aufsetzen/entfernen">Stopfen</button>
+                        <button type="button" id="lab-insp-flip" class="lab-action-chip" title="Horizontal spiegeln">⇄ Spiegeln</button>
+                        <button type="button" id="lab-insp-front" class="lab-action-chip" title="In den Vordergrund">▲ Vorn</button>
+                        <button type="button" id="lab-insp-back" class="lab-action-chip" title="In den Hintergrund">▼ Hinten</button>
+                        <button type="button" id="lab-insp-duplicate" class="lab-action-chip" title="Gerät duplizieren">⧉ Kopie</button>
+                        <button type="button" id="lab-insp-delete" class="lab-action-chip lab-danger" title="Gerät löschen (Entf)">🗑 Löschen</button>
+                    </div>
+                </aside>
+
+                <!-- Dezenter Hinweis bei aktivem Hold-to-Snap oder Wacom Radierer -->
+                <div id="canvas-toast" class="canvas-toast hidden">Linie eingerastet (Hold-to-Snap)</div>
+            </main>
+        </div>
+    </section>
+
+    <!-- ===================================================================
+         4. MODALS & POPOVERS (NEUES HEFT, PAPIERVORLAGE, STICKER, KONFLIKT, EXPORT)
+    ==================================================================== -->
+
+    <!-- MODAL: NEUES HEFT ERSTELLEN / PAPIERVORLAGE & COVER KONFIGURIEREN -->
+    <div id="notebook-modal" class="modal-backdrop hidden">
+        <div class="modal-card modal-lg">
+            <div class="modal-header">
+                <h3 id="notebook-modal-title">Neues Tafelheft erstellen</h3>
+                <button type="button" class="modal-close-btn" data-close-modal="notebook-modal">✕</button>
+            </div>
+            <form id="notebook-form">
+                <div class="modal-body">
+                    <div class="form-row-2">
+                        <div>
+                            <label class="form-label" for="nb-input-title">Heft-Titel (z. B. 5 NTB, 9b Chemie)</label>
+                            <input type="text" id="nb-input-title" class="form-input" placeholder="z. B. 5 NTB – Natur und Technik" required>
+                        </div>
+                        <div>
+                            <label class="form-label" for="nb-input-folder">Ordner</label>
+                            <select id="nb-input-folder" class="form-input"></select>
+                        </div>
+                    </div>
+
+                    <div class="form-section-title">1. Heft-Cover (Frei beschreibbar wie in GoodNotes)</div>
+                    <div class="cover-presets-grid" id="cover-presets-grid">
+                        <button type="button" class="cover-preset-card active" data-cover-preset="sage" data-bg="#88b378" data-spine="#a3c995">
+                            <span class="cover-mini-preview" style="--cov-bg: #88b378; --cov-spine: #a3c995;">
+                                <span class="cov-label-line"></span>
+                            </span>
+                            <span class="cover-preset-name">Salbeigrün (5 NTB)</span>
+                        </button>
+                        <button type="button" class="cover-preset-card" data-cover-preset="ocean" data-bg="#2b579a" data-spine="#4a78c2">
+                            <span class="cover-mini-preview" style="--cov-bg: #2b579a; --cov-spine: #4a78c2;">
+                                <span class="cov-label-line"></span>
+                            </span>
+                            <span class="cover-preset-name">Ozeanblau</span>
+                        </button>
+                        <button type="button" class="cover-preset-card" data-cover-preset="terracotta" data-bg="#c25e42" data-spine="#db8269">
+                            <span class="cover-mini-preview" style="--cov-bg: #c25e42; --cov-spine: #db8269;">
+                                <span class="cov-label-line"></span>
+                            </span>
+                            <span class="cover-preset-name">Terrakotta</span>
+                        </button>
+                        <button type="button" class="cover-preset-card" data-cover-preset="anthracite" data-bg="#334155" data-spine="#475569">
+                            <span class="cover-mini-preview" style="--cov-bg: #334155; --cov-spine: #475569;">
+                                <span class="cov-label-line"></span>
+                            </span>
+                            <span class="cover-preset-name">Anthrazit</span>
+                        </button>
+                        <button type="button" class="cover-preset-card" data-cover-preset="none" data-bg="#fbf8ee" data-spine="#e2e8f0">
+                            <span class="cover-mini-preview no-cover-preview">Ohne</span>
+                            <span class="cover-preset-name">Kein Cover</span>
+                        </button>
+                    </div>
+
+                    <div class="form-row-2" style="margin-top: 12px;">
+                        <div>
+                            <label class="form-label" for="nb-cover-pattern">Cover-Muster</label>
+                            <select id="nb-cover-pattern" class="form-input">
+                                <option value="school_label" selected>Schulheft-Etikett (Weißes Schild)</option>
+                                <option value="mint_grid">MINT-Grid (Dezentes Geometrie-Raster)</option>
+                                <option value="minimal">Minimalistisch (Blanko mit Buchrücken)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="form-label" for="nb-paper-color">Standard-Papierfarbe</label>
+                            <div class="paper-color-choices" id="nb-paper-color-choices">
+                                <button type="button" class="paper-color-btn active" data-paper-color="#fbf8ee">
+                                    <span class="paper-swatch" style="background: #fbf8ee;"></span> Warm-Beige (GoodNotes)
+                                </button>
+                                <button type="button" class="paper-color-btn" data-paper-color="#ffffff">
+                                    <span class="paper-swatch" style="background: #ffffff;"></span> Reinweiß
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-section-title">2. Papier-Lineatur (Gestochen scharfe Vektoren)</div>
+                    <div class="template-presets-grid" id="nb-template-grid">
+                        <button type="button" class="template-card active" data-template="grid_5mm">
+                            <div class="tpl-preview tpl-grid"></div>
+                            <span>Kariert (5 mm)</span>
+                        </button>
+                        <button type="button" class="template-card" data-template="ruled_margin">
+                            <div class="tpl-preview tpl-ruled"></div>
+                            <span>Liniert (mit Rand)</span>
+                        </button>
+                        <button type="button" class="template-card" data-template="dotted">
+                            <div class="tpl-preview tpl-dotted"></div>
+                            <span>Gepunktet (Dot-Grid)</span>
+                        </button>
+                        <button type="button" class="template-card" data-template="blank">
+                            <div class="tpl-preview tpl-blank"></div>
+                            <span>Leer (Blanko)</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" data-close-modal="notebook-modal">Abbrechen</button>
+                    <button type="submit" class="btn btn-primary">Heft anlegen &amp; öffnen</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: PAPIERVORLAGE DER AKTUELLEN SEITE ÄNDERN -->
+    <div id="page-template-modal" class="modal-backdrop hidden">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>Seiten-Vorlage &amp; Papierwahl</h3>
+                <button type="button" class="modal-close-btn" data-close-modal="page-template-modal">✕</button>
+            </div>
+            <div class="modal-body">
+                <label class="form-label">Papierfarbe dieser Seite</label>
+                <div class="paper-color-choices" id="page-paper-color-choices">
+                    <button type="button" class="paper-color-btn active" data-page-color="#fbf8ee">
+                        <span class="paper-swatch" style="background: #fbf8ee;"></span> Warm-Beige (#fbf8ee)
+                    </button>
+                    <button type="button" class="paper-color-btn" data-page-color="#ffffff">
+                        <span class="paper-swatch" style="background: #ffffff;"></span> Reinweiß (#ffffff)
+                    </button>
+                </div>
+
+                <label class="form-label" style="margin-top: 16px;">Lineatur / Seiten-Typ</label>
+                <div class="template-presets-grid" id="page-template-grid">
+                    <button type="button" class="template-card" data-page-tpl="grid_5mm">
+                        <div class="tpl-preview tpl-grid"></div>
+                        <span>Kariert (5 mm)</span>
+                    </button>
+                    <button type="button" class="template-card" data-page-tpl="ruled_margin">
+                        <div class="tpl-preview tpl-ruled"></div>
+                        <span>Liniert (Rand)</span>
+                    </button>
+                    <button type="button" class="template-card" data-page-tpl="dotted">
+                        <div class="tpl-preview tpl-dotted"></div>
+                        <span>Dot-Grid</span>
+                    </button>
+                    <button type="button" class="template-card" data-page-tpl="blank">
+                        <div class="tpl-preview tpl-blank"></div>
+                        <span>Blanko</span>
+                    </button>
+                    <button type="button" class="template-card" data-page-tpl="cover_sage">
+                        <div class="tpl-preview" style="background: linear-gradient(90deg, #a3c995 22%, #88b378 22%);"></div>
+                        <span>Cover Salbei</span>
+                    </button>
+                    <button type="button" class="template-card" data-page-tpl="cover_ocean">
+                        <div class="tpl-preview" style="background: linear-gradient(90deg, #4a78c2 22%, #2b579a 22%);"></div>
+                        <span>Cover Ozean</span>
+                    </button>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" data-close-modal="page-template-modal">Schließen</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: HEFT-AKTIONEN (UMBENENNEN, VERSCHIEBEN, DUPLIZIEREN, LÖSCHEN MIT SYMBOLEN) -->
+    <div id="notebook-actions-modal" class="modal-backdrop hidden">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 id="nb-actions-title">Heft verwalten</h3>
+                <button type="button" class="modal-close-btn" data-close-modal="notebook-actions-modal">✕</button>
+            </div>
+            <div class="modal-body">
+                <label class="form-label" for="nb-actions-rename-input">Heft-Titel</label>
+                <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+                    <input type="text" id="nb-actions-rename-input" class="form-input" placeholder="Titel eingeben...">
+                    <button type="button" id="btn-nb-act-rename" class="btn btn-primary" title="Titel speichern">✓</button>
+                </div>
+
+                <label class="form-label" for="nb-actions-folder-select">Ordner zuweisen</label>
+                <div style="display: flex; gap: 8px; margin-bottom: 18px;">
+                    <select id="nb-actions-folder-select" class="form-input"></select>
+                    <button type="button" id="btn-nb-act-move" class="btn btn-secondary" title="In diesen Ordner verschieben">Verschieben</button>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding-top: 10px; border-top: 1px solid var(--gn-border);">
+                    <button type="button" id="btn-nb-act-duplicate" class="btn btn-secondary">
+                        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                        </svg>
+                        <span>Duplizieren</span>
+                    </button>
+                    <button type="button" id="btn-nb-act-delete" class="btn btn-danger">
+                        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="3 6 5 6 21 6"></polyline>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                        </svg>
+                        <span>Löschen</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: ORDNER VERWALTEN (ANLEGEN / UMBENENNEN / FARBE) -->
+    <div id="folder-modal" class="modal-backdrop hidden">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 id="folder-modal-title">Ordner anlegen / bearbeiten</h3>
+                <button type="button" class="modal-close-btn" data-close-modal="folder-modal">✕</button>
+            </div>
+            <form id="folder-form">
+                <div class="modal-body">
+                    <input type="hidden" id="folder-edit-id" value="">
+                    <label class="form-label" for="folder-input-name">Ordner-Name</label>
+                    <input type="text" id="folder-input-name" class="form-input" placeholder="z. B. 8a Chemie" required>
+
+                    <label class="form-label" style="margin-top: 14px;">Ordner-Farbe</label>
+                    <div class="folder-color-picker" id="folder-color-picker">
+                        <button type="button" class="color-swatch active" data-folder-color="#6ea864" style="--swatch-color: #6ea864;"></button>
+                        <button type="button" class="color-swatch" data-folder-color="#2b579a" style="--swatch-color: #2b579a;"></button>
+                        <button type="button" class="color-swatch" data-folder-color="#d97706" style="--swatch-color: #d97706;"></button>
+                        <button type="button" class="color-swatch" data-folder-color="#dc2626" style="--swatch-color: #dc2626;"></button>
+                        <button type="button" class="color-swatch" data-folder-color="#0284c7" style="--swatch-color: #0284c7;"></button>
+                        <button type="button" class="color-swatch" data-folder-color="#7c3aed" style="--swatch-color: #7c3aed;"></button>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" id="btn-delete-folder" class="btn btn-danger hidden" style="margin-right: auto;">Ordner löschen</button>
+                    <button type="button" class="btn btn-secondary" data-close-modal="folder-modal">Abbrechen</button>
+                    <button type="submit" class="btn btn-primary">Speichern</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: 409 SYNC-KONFLIKT (STALE-TAB-SCHUTZ ZWISCHEN IPAD & PC) -->
+    <div id="conflict-modal" class="modal-backdrop hidden">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>Synchronisations-Konflikt erkannt (409)</h3>
+            </div>
+            <div class="modal-body">
+                <p>Diese Seite wurde zwischenzeitlich auf einem anderen Gerät (z. B. iPad oder Lehrer-PC) bearbeitet und gespeichert.</p>
+                <p>Wie möchtest du fortfahren?</p>
+            </div>
+            <div class="modal-actions conflict-actions">
+                <button type="button" id="btn-conflict-load-server" class="btn btn-secondary">Server-Stand laden</button>
+                <button type="button" id="btn-conflict-merge" class="btn btn-primary">Beide Stände zusammenführen (Merge)</button>
+                <button type="button" id="btn-conflict-force-local" class="btn btn-danger">Meinen Stand erzwingen</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: EINSTELLUNGEN & SYSTEMSTATUS -->
+    <div id="settings-modal" class="modal-backdrop hidden">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>Einstellungen &amp; Systemstatus</h3>
+                <button type="button" class="modal-close-btn" data-close-modal="settings-modal">✕</button>
+            </div>
+            <div class="modal-body">
+                <p style="margin-top: 0; color: var(--gn-text-muted); font-size: 0.9rem;">
+                    WebNotes ist über das <code>/locked</code>-Adminportal geschützt. Alle Bibliotheken laufen lokal und DSGVO-konform.
+                </p>
+                <div style="margin-top: 14px; display: flex; gap: 10px; justify-content: flex-end;">
+                    <a href="setup_libs.php" class="btn btn-primary" target="_blank">Bibliotheken- &amp; Server-Check</a>
+                    <button type="button" class="btn btn-secondary" data-close-modal="settings-modal">Schließen</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: FORTSCHRITTSANZEIGE FÜR PDF-IMPORT & 300-DPI PDF-EXPORT -->
+    <div id="progress-modal" class="modal-backdrop hidden">
+        <div class="modal-card progress-card">
+            <h3 id="progress-modal-title">Verlustfreier 300-DPI PDF-Export...</h3>
+            <p id="progress-modal-sub">Rendere Seite 1 von 5 in Druckauflösung (2480 × 3508 px)...</p>
+            <div class="progress-bar-track">
+                <div id="progress-bar-fill" class="progress-bar-fill" style="width: 0%;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- VERSTECKTE FILE-INPUTS FÜR BILD-UPLOAD & PDF-IMPORT -->
+    <input type="file" id="hidden-image-input" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml" class="hidden">
+    <input type="file" id="hidden-pdf-input" accept="application/pdf" class="hidden">
+
+    <!-- LOKALE BIBLIOTHEKEN (DSGVO-KONFORM AUS ./libs/ OHNE EXTERNE CDNS) -->
+    <script src="libs/pdf.min.js"></script>
+    <script>
+        if (window.pdfjsLib && window.pdfjsLib.GlobalWorkerOptions) {
+            window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'libs/pdf.worker.min.js';
+        }
+    </script>
+    <script src="libs/jspdf.umd.min.js"></script>
+    <script src="app.js?v=20261120_2"></script>
+    <script src="lab.js?v=20261119_7"></script>
+    <script src="widgets.js?v=20261119_6"></script>
+</body>
+</html>

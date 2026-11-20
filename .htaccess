@@ -1,0 +1,25 @@
+# WebNotes Root Configuration
+Options -Indexes
+
+# Increase upload limits if allowed on Shared Hosting
+<IfModule mod_php.c>
+    php_value upload_max_filesize 64M
+    php_value post_max_size 64M
+    php_value memory_limit 256M
+</IfModule>
+
+# Protect hidden files
+<FilesMatch "^\.">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order deny,allow
+        Deny from all
+    </IfModule>
+</FilesMatch>
+
+# Proper MIME types and caching for local libraries
+<IfModule mod_mime.c>
+    AddType application/javascript .js
+</IfModule>

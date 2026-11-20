@@ -1,0 +1,29 @@
+# System & Editor
+.DS_Store
+Thumbs.db
+*.log
+.vscode/
+
+# Secrets, Umgebungsvariablen & Datenbanken (niemals ins Repository!)
+.env
+.env.*
+!.env.example
+*.sqlite
+*.sqlite3
+*.sqlite-wal
+*.sqlite-shm
+*.db
+*.pem
+*.key
+vapid_keys.json
+
+# FTP-Backups & temporäre Exporte
+net2ftp-*/
+
+# Persönliche Hefte, Ordner-Daten & Zugangsdaten (niemals ins öffentliche Repo!)
+data/notebooks/
+data/auth.json
+data/folders.json
+data/*.json
+data/*.tmp.*
+!data/.htaccess
