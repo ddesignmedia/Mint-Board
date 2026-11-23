@@ -1206,17 +1206,55 @@
 
     <!-- MODAL: EINSTELLUNGEN & SYSTEMSTATUS -->
     <div id="settings-modal" class="modal-backdrop hidden">
-        <div class="modal-card">
+        <div class="modal-card modal-settings">
             <div class="modal-header">
-                <h3>Einstellungen &amp; Systemstatus</h3>
+                <h3>Einstellungen &amp; Datensicherung</h3>
                 <button type="button" class="modal-close-btn" data-close-modal="settings-modal">✕</button>
             </div>
             <div class="modal-body">
-                <p style="margin-top: 0; color: var(--gn-text-muted); font-size: 0.9rem;">
-                    WebNotes ist über das <code>/locked</code>-Adminportal geschützt. Alle Bibliotheken laufen lokal und DSGVO-konform.
+                <p id="settings-system-hint" style="margin-top: 0; color: var(--gn-text-muted); font-size: 0.88rem;">
+                    Mint-Board läuft 100 % lokal und DSGVO-konform ohne externe CDNs.
                 </p>
-                <div style="margin-top: 14px; display: flex; gap: 10px; justify-content: flex-end;">
-                    <a href="setup_libs.php" class="btn btn-primary" target="_blank">Bibliotheken- &amp; Server-Check</a>
+
+                <!-- Datensicherung: Komplett-Backup & Wiederherstellung -->
+                <div class="backup-panel">
+                    <div class="backup-panel-title">💾 Datensicherung (Alle Hefte &amp; Ordner)</div>
+                    <p id="backup-mode-hint" class="backup-panel-hint">
+                        Sichert alle Ordner, Hefte, Seiten sowie eingebettete Bilder &amp; PDFs in einer Datei – zur Wiederherstellung bei Datenverlust oder Gerätewechsel.
+                    </p>
+
+                    <div class="backup-mode-group" role="radiogroup" aria-label="Wiederherstellungs-Modus">
+                        <label class="backup-mode-option">
+                            <input type="radio" name="backup-restore-mode" value="merge" checked>
+                            <span>
+                                <strong>Zusammenführen (Merge)</strong>
+                                <small>Ergänzt fehlende Ordner &amp; Hefte, bestehende bleiben erhalten.</small>
+                            </span>
+                        </label>
+                        <label class="backup-mode-option">
+                            <input type="radio" name="backup-restore-mode" value="replace">
+                            <span>
+                                <strong>Komplett ersetzen</strong>
+                                <small>Stellt exakt den gesicherten Stand wieder her (überschreibt aktuelle Hefte).</small>
+                            </span>
+                        </label>
+                    </div>
+
+                    <div class="backup-actions-row">
+                        <button type="button" id="btn-backup-export" class="btn btn-primary">
+                            ⬇ Alle Hefte sichern
+                        </button>
+                        <button type="button" id="btn-backup-import" class="btn btn-secondary">
+                            ⬆ Backup wiederherstellen
+                        </button>
+                        <input type="file" id="hidden-backup-input" accept=".zip,.json,application/zip,application/json" class="hidden">
+                    </div>
+
+                    <div id="backup-status-box" class="backup-status-box hidden"></div>
+                </div>
+
+                <div class="settings-footer-row">
+                    <a id="link-server-check" href="setup_libs.php" class="btn btn-secondary" target="_blank">Bibliotheken- &amp; Server-Check</a>
                     <button type="button" class="btn btn-secondary" data-close-modal="settings-modal">Schließen</button>
                 </div>
             </div>

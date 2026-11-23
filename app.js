@@ -5456,8 +5456,247 @@
         document.getElementById('btn-new-folder').addEventListener('click', () => openFolderModal(null));
         document.getElementById('btn-new-notebook').addEventListener('click', () => openNewNotebookModal());
         document.getElementById('btn-open-settings').addEventListener('click', () => {
+            updateBackupModalModeUI();
             document.getElementById('settings-modal').classList.remove('hidden');
         });
+
+        // Backup & Wiederherstellung (PHP-Server .zip/.json & GitHub-Pages Demo .json)
+        const btnBackupExport = document.getElementById('btn-backup-export');
+        const btnBackupImport = document.getElementById('btn-backup-import');
+        const hiddenBackupInput = document.getElementById('hidden-backup-input');
+
+        function setBackupStatus(type, text) {
+            const box = document.getElementById('backup-status-box');
+            if (!box) return;
+            if (!text) {
+                box.classList.add('hidden');
+                box.textContent = '';
+                box.className = 'backup-status-box hidden';
+                return;
+            }
+            box.className = `backup-status-box is-${type}`;
+            box.textContent = text;
+        }
+
+        function updateBackupModalModeUI() {
+            setBackupStatus('', '');
+            const hint = document.getElementById('backup-mode-hint');
+            const serverCheck = document.getElementById('link-server-check');
+            if (isStaticDemoMode) {
+                if (hint) {
+                    hint.textContent = 'Demo-Modus (Lokal): Sichert alle deine Test-Hefte & Ordner als .json-Datei. Du kannst sie jederzeit wieder einspielen – oder später sogar direkt auf deinen eigenen PHP-Server importieren.';
+                }
+                if (btnBackupExport) btnBackupExport.textContent = '⬇ Alle Hefte sichern (.json)';
+                if (hiddenBackupInput) hiddenBackupInput.setAttribute('accept', '.json,application/json');
+                if (serverCheck) serverCheck.classList.add('hidden');
+            } else {
+                if (hint) {
+                    hint.textContent = 'Sichert alle Ordner, Hefte, Seiten sowie eingebettete Bilder & PDFs als .zip-Archiv. Wiederherstellung unterstützt komplette .zip-Backups und Demo-.json-Dateien.';
+                }
+                if (btnBackupExport) btnBackupExport.textContent = '⬇ Alle Hefte sichern (.zip)';
+                if (hiddenBackupInput) hiddenBackupInput.setAttribute('accept', '.zip,.json,application/zip,application/json');
+                if (serverCheck) serverCheck.classList.remove('hidden');
+            }
+        }
+
+        function makeBackupTimestamp() {
+            const d = new Date();
+            const pad = (n) => String(n).padStart(2, '0');
+            return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}_${pad(d.getHours())}-${pad(d.getMinutes())}`;
+        }
+
+        if (btnBackupExport) {
+            btnBackupExport.addEventListener('click', async () => {
+                btnBackupExport.disabled = true;
+                try {
+                    if (isStaticDemoMode) {
+                        const store = loadStaticDemoStore();
+                        const payload = {
+                            format: 'mintboard-demo-backup-v1',
+                            exportedAt: new Date().toISOString(),
+                            folders: store.folders || [],
+                            notebooks: store.notebooks || {}
+                        };
+                        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `mintboard-demo-backup-${makeBackupTimestamp()}.json`;
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                        setTimeout(() => URL.revokeObjectURL(url), 1000);
+                        const nbCount = Object.keys(payload.notebooks).length;
+                        setBackupStatus('success', `Backup heruntergeladen (${payload.folders.length} Ordner, ${nbCount} Hefte).`);
+                    } else {
+                        setBackupStatus('info', 'Erstelle vollständiges Server-Backup (.zip)…');
+                        const resp = await fetch('api.php?action=export_backup', { credentials: 'same-origin' });
+                        if (!resp.ok) {
+                            let errMsg = `HTTP ${resp.status}`;
+                            try {
+                                const errJson = await resp.json();
+                                if (errJson && errJson.error) errMsg = errJson.error;
+                            } catch (_) {}
+                            throw new Error(errMsg);
+                        }
+                        const blob = await resp.blob();
+                        const disp = resp.headers.get('Content-Disposition') || '';
+                        const match = disp.match(/filename="([^"]+)"/);
+                        const fileName = match ? match[1] : `mintboard-backup-${makeBackupTimestamp()}.zip`;
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = fileName;
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                        setTimeout(() => URL.revokeObjectURL(url), 1500);
+                        const mb = (blob.size / (1024 * 1024)).toFixed(2).replace('.', ',');
+                        setBackupStatus('success', `Komplett-Backup gespeichert (${fileName}, ${mb} MB).`);
+                    }
+                } catch (err) {
+                    setBackupStatus('error', 'Backup fehlgeschlagen: ' + (err.message || err));
+                } finally {
+                    btnBackupExport.disabled = false;
+                }
+            });
+        }
+
+        if (btnBackupImport && hiddenBackupInput) {
+            btnBackupImport.addEventListener('click', () => {
+                hiddenBackupInput.value = '';
+                hiddenBackupInput.click();
+            });
+
+            hiddenBackupInput.addEventListener('change', async () => {
+                const file = hiddenBackupInput.files && hiddenBackupInput.files[0];
+                if (!file) return;
+
+                const modeRadio = document.querySelector('input[name="backup-restore-mode"]:checked');
+                const mode = modeRadio ? modeRadio.value : 'merge';
+
+                if (mode === 'replace') {
+                    const ok = window.confirm('Achtung: Alle aktuell vorhandenen Hefte und Ordner werden durch das Backup ersetzt. Wirklich fortfahren?');
+                    if (!ok) return;
+                }
+
+                btnBackupImport.disabled = true;
+                if (btnBackupExport) btnBackupExport.disabled = true;
+
+                try {
+                    const lowerName = file.name.toLowerCase();
+                    const isJsonFile = lowerName.endsWith('.json') || file.type === 'application/json';
+                    const isZipFile = lowerName.endsWith('.zip') || file.type === 'application/zip' || file.type === 'application/x-zip-compressed';
+
+                    if (isStaticDemoMode) {
+                        if (!isJsonFile) {
+                            throw new Error('Im lokalen Demo-Modus können nur .json-Backups wiederhergestellt werden (.zip-Archive erfordern den PHP-Server).');
+                        }
+                        setBackupStatus('info', 'Lese Backup-Datei ein…');
+                        const text = await file.text();
+                        const parsed = JSON.parse(text);
+                        if (!parsed || !Array.isArray(parsed.folders) || !parsed.notebooks || typeof parsed.notebooks !== 'object') {
+                            throw new Error('Ungültiges Mint-Board Backup-Format.');
+                        }
+
+                        const current = loadStaticDemoStore();
+                        let addedFolders = 0;
+                        let restoredNotebooks = 0;
+
+                        if (mode === 'replace') {
+                            staticDemoMemStore = {
+                                folders: parsed.folders,
+                                notebooks: parsed.notebooks
+                            };
+                            addedFolders = parsed.folders.length;
+                            restoredNotebooks = Object.keys(parsed.notebooks).length;
+                        } else {
+                            const folderIds = new Set(current.folders.map(f => f.id));
+                            for (const f of parsed.folders) {
+                                if (f && f.id && !folderIds.has(f.id)) {
+                                    current.folders.push(f);
+                                    folderIds.add(f.id);
+                                    addedFolders++;
+                                }
+                            }
+                            for (const [nbId, nbData] of Object.entries(parsed.notebooks)) {
+                                if (nbData && nbData.meta) {
+                                    current.notebooks[nbId] = nbData;
+                                    restoredNotebooks++;
+                                }
+                            }
+                            staticDemoMemStore = current;
+                        }
+
+                        saveStaticDemoStore(staticDemoMemStore);
+                        AppState.pagesCache = {};
+                        await loadDashboard();
+                        setBackupStatus('success', `Wiederherstellung abgeschlossen: ${addedFolders} Ordner und ${restoredNotebooks} Hefte geladen.`);
+                    } else {
+                        if (!isZipFile && !isJsonFile) {
+                            throw new Error('Bitte eine .zip- oder .json-Backup-Datei auswählen.');
+                        }
+
+                        const CHUNK_SIZE = 1536 * 1024; // 1,5 MB pro Chunk (funktioniert auf jedem PHP-Shared-Hosting)
+                        const totalChunks = Math.max(1, Math.ceil(file.size / CHUNK_SIZE));
+                        const uploadId = 'bkp_' + Date.now() + '_' + Math.random().toString(36).slice(2, 10);
+
+                        for (let i = 0; i < totalChunks; i++) {
+                            const start = i * CHUNK_SIZE;
+                            const end = Math.min(file.size, start + CHUNK_SIZE);
+                            const slice = file.slice(start, end);
+                            const pct = Math.round(((i + 1) / totalChunks) * 100);
+                            setBackupStatus('info', `Lade Backup auf den Server hoch… ${pct} % (${i + 1}/${totalChunks})`);
+
+                            const fd = new FormData();
+                            fd.append('uploadId', uploadId);
+                            fd.append('chunkIndex', String(i));
+                            fd.append('totalChunks', String(totalChunks));
+                            fd.append('chunk', slice, 'chunk.part');
+
+                            const chunkResp = await fetch('api.php?action=import_backup_chunk', {
+                                method: 'POST',
+                                credentials: 'same-origin',
+                                body: fd
+                            });
+                            const chunkJson = await chunkResp.json().catch(() => null);
+                            if (!chunkResp.ok || !chunkJson || !chunkJson.ok) {
+                                throw new Error((chunkJson && chunkJson.error) || `Chunk-Upload fehlgeschlagen (HTTP ${chunkResp.status})`);
+                            }
+                        }
+
+                        setBackupStatus('info', 'Prüfe Archiv & stelle Hefte wieder her…');
+                        const finalResp = await fetch('api.php?action=import_backup_finalize', {
+                            method: 'POST',
+                            credentials: 'same-origin',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                uploadId,
+                                mode,
+                                fileType: isJsonFile ? 'json' : 'zip'
+                            })
+                        });
+                        const finalJson = await finalResp.json().catch(() => null);
+                        if (!finalResp.ok || !finalJson || !finalJson.ok) {
+                            throw new Error((finalJson && finalJson.error) || `Wiederherstellung fehlgeschlagen (HTTP ${finalResp.status})`);
+                        }
+
+                        AppState.pagesCache = {};
+                        try { localStorage.removeItem('webnotes_dashboard_cache'); } catch (_) {}
+                        await loadDashboard();
+                        setBackupStatus(
+                            'success',
+                            `Erfolgreich wiederhergestellt: ${finalJson.restoredNotebooks} Hefte, ${finalJson.restoredFolders} Ordner (${finalJson.restoredFiles} Dateien).`
+                        );
+                    }
+                } catch (err) {
+                    setBackupStatus('error', 'Fehler bei der Wiederherstellung: ' + (err.message || err));
+                } finally {
+                    btnBackupImport.disabled = false;
+                    if (btnBackupExport) btnBackupExport.disabled = false;
+                }
+            });
+        }
 
         DOM.dashSearchInput.addEventListener('input', () => {
             AppState.searchQuery = DOM.dashSearchInput.value;

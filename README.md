@@ -3,7 +3,7 @@
 > Digitales Tafel- & Notizheft für den MINT-Unterricht – optimiert für Wacom-Stiftdisplays (Windows) und iPad (Apple Pencil), mit integriertem Labor-Baukasten, Unterrichts-Widgets, PDF-Pipeline und Multi-Device-Sync.
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Version-v0.0.3-informational?style=flat-square" alt="Version v0.0.3">
+  <img src="https://img.shields.io/badge/Version-v0.0.4-informational?style=flat-square" alt="Version v0.0.4">
   <img src="https://img.shields.io/badge/Frontend-Vanilla_HTML5_%2F_CSS3_%2F_JS-F7DF1E?style=flat-square" alt="Vanilla Frontend">
   <img src="https://img.shields.io/badge/Backend-PHP_8.x_(JSON_Flat--File)-777BB4?style=flat-square&logo=php&logoColor=white" alt="PHP 8.x">
   <img src="https://img.shields.io/badge/Dependencies-Zero_External_CDNs-blue?style=flat-square" alt="Zero External CDNs">
@@ -25,7 +25,7 @@ Auf **GitHub Pages** startet Mint-Board automatisch im **lokalen Demo-Modus** (B
 👉 [**🌐 Mint-Board Live-Demo öffnen**](https://ddesignmedia.github.io/Mint-Board/)
 
 * Alle Zeichen-, Text-, Labor-, Widget-, Bild- sowie PDF-Import- und Export-Funktionen können direkt getestet werden.
-* Neue Hefte und Änderungen werden lokal im Browser gespeichert (gerätespezifisch, ohne Cloud-Sync).
+* Neue Hefte und Änderungen werden lokal im Browser gespeichert (gerätespezifisch, ohne Cloud-Sync) – über **Einstellungen → Datensicherung** lassen sich alle Test-Hefte jederzeit als `.json`-Backup exportieren, wiederherstellen oder sogar auf einen eigenen PHP-Server übernehmen.
 * Für den produktiven Einsatz mit **Multi-Device-Sync** (z. B. Lehrer-PC ↔ iPad) einfach auf einem eigenen PHP-Webspace hosten.
 
 ---
@@ -64,6 +64,11 @@ Auf **GitHub Pages** startet Mint-Board automatisch im **lokalen Demo-Modus** (B
 ---
 
 ## 📋 Changelog
+
+### `v0.0.4`
+* **Komplett-Backup & Wiederherstellung (PHP-Server):** Neuer 1-Klick-Export aller Ordner, Hefte, Seiten und eingebetteten Bilder/PDFs als `.zip`-Archiv (`api.php?action=export_backup`) sowie sichere Wiederherstellung per Chunked-Upload (`1,5 MB`-Chunks für große Archive, Zip-Slip-Schutz, Dateityp-Whitelist & automatisches Rollback bei Fehlern)
+* **Backup & Restore im GitHub-Pages Demo-Modus:** Test-Hefte & Ordner lassen sich lokal als `.json`-Backup sichern, wiederherstellen und bei Bedarf sogar direkt auf einen eigenen PHP-Server importieren
+* **Zwei Wiederherstellungs-Modi:** Wahl zwischen **Zusammenführen (Merge)** (ergänzt fehlende Ordner & Hefte) und **Komplett ersetzen** (stellt exakt den Backup-Stand wieder her) direkt im Einstellungen-Dialog
 
 ### `v0.0.3`
 * **Interaktives Geodreieck:** Klassisches Schul-Geodreieck mit farbigem Winkelmesser (Doppelskala), Parallellinien, Drehung exakt um den Nullpunkt und Stift-Einrasten an allen drei Kanten

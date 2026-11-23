@@ -897,6 +897,374 @@ if ($action === 'get_asset') {
     exit;
 }
 
+// =========================================================================
+// KOMPLETT-BACKUP (ZIP-EXPORT ALLER ORDNER, HEFTE, SEITEN & ASSETS)
+// =========================================================================
+function rrmdirRecursive(string $dir): void {
+    if (!is_dir($dir)) return;
+    $items = @scandir($dir);
+    if (!is_array($items)) return;
+    foreach ($items as $item) {
+        if ($item === '.' || $item === '..') continue;
+        $path = $dir . '/' . $item;
+        if (is_dir($path)) {
+            rrmdirRecursive($path);
+        } else {
+            @unlink($path);
+        }
+    }
+    @rmdir($dir);
+}
+
+if ($action === 'export_backup') {
+    if (!class_exists('ZipArchive')) {
+        sendJson(['ok' => false, 'error' => 'PHP ZipArchive-Erweiterung ist auf diesem Server nicht aktiviert.'], 500);
+    }
+
+    $tmpDir = DATA_DIR . '/_backup_tmp';
+    if (!is_dir($tmpDir)) {
+        @mkdir($tmpDir, 0755, true);
+    }
+    $zipPath = $tmpDir . '/backup_' . date('Ymd_His') . '_' . bin2hex(random_bytes(4)) . '.zip';
+
+    $zip = new ZipArchive();
+    if ($zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
+        sendJson(['ok' => false, 'error' => 'Temporäre Backup-ZIP-Datei konnte nicht erstellt werden.'], 500);
+    }
+
+    $folderData = readJsonFile(FOLDERS_FILE, ['folders' => []]);
+    $folderCount = is_array($folderData['folders'] ?? null) ? count($folderData['folders']) : 0;
+    if (file_exists(FOLDERS_FILE)) {
+        $zip->addFile(FOLDERS_FILE, 'folders.json');
+    }
+
+    $notebookCount = 0;
+    $fileCount = 0;
+    if (is_dir(NOTEBOOKS_DIR)) {
+        $nbDirs = @scandir(NOTEBOOKS_DIR);
+        if (is_array($nbDirs)) {
+            foreach ($nbDirs as $nbName) {
+                if ($nbName === '.' || $nbName === '..') continue;
+                $nbFull = NOTEBOOKS_DIR . '/' . $nbName;
+                if (!is_dir($nbFull)) continue;
+                $notebookCount++;
+
+                $it = new RecursiveIteratorIterator(
+                    new RecursiveDirectoryIterator($nbFull, FilesystemIterator::SKIP_DOTS),
+                    RecursiveIteratorIterator::LEAVES_ONLY
+                );
+                foreach ($it as $fileInfo) {
+                    if (!$fileInfo->isFile()) continue;
+                    $absPath = $fileInfo->getPathname();
+                    $baseName = $fileInfo->getFilename();
+                    // Temporäre atomare Schreibdateien überspringen
+                    if (strpos($baseName, '.tmp.') !== false) continue;
+
+                    $relInsideData = str_replace('\\', '/', substr($absPath, strlen(DATA_DIR) + 1));
+                    $zip->addFile($absPath, $relInsideData);
+                    $fileCount++;
+                }
+            }
+        }
+    }
+
+    $manifest = [
+        'format'        => 'mintboard-backup-v1',
+        'exportedAt'    => date('c'),
+        'folderCount'   => $folderCount,
+        'notebookCount' => $notebookCount,
+        'fileCount'     => $fileCount
+    ];
+    $zip->addFromString('backup-manifest.json', json_encode($manifest, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+    $zip->close();
+
+    if (!file_exists($zipPath)) {
+        sendJson(['ok' => false, 'error' => 'Backup-ZIP konnte nicht finalisiert werden.'], 500);
+    }
+
+    $downloadName = 'mintboard-backup-' . date('Y-m-d_H-i') . '.zip';
+    header('Content-Type: application/zip');
+    header('Content-Disposition: attachment; filename="' . $downloadName . '"');
+    header('Content-Length: ' . filesize($zipPath));
+    header('Cache-Control: no-store, no-cache, must-revalidate');
+    readfile($zipPath);
+    @unlink($zipPath);
+    exit;
+}
+
+// =========================================================================
+// CHUNKED BACKUP-UPLOAD & WIEDERHERSTELLUNG (.zip ODER DEMO-.json)
+// =========================================================================
+if ($action === 'import_backup_chunk') {
+    $uploadId = preg_replace('/[^a-zA-Z0-9_-]/', '', (string)($_POST['uploadId'] ?? ''));
+    $chunkIndex = (int)($_POST['chunkIndex'] ?? -1);
+    $totalChunks = (int)($_POST['totalChunks'] ?? 0);
+
+    if ($uploadId === '' || strlen($uploadId) < 6 || $chunkIndex < 0 || $totalChunks < 1 || $chunkIndex >= $totalChunks) {
+        sendJson(['ok' => false, 'error' => 'Ungültige Upload-Chunk-Parameter.'], 400);
+    }
+    if (!isset($_FILES['chunk']) || $_FILES['chunk']['error'] !== UPLOAD_ERR_OK) {
+        sendJson(['ok' => false, 'error' => 'Backup-Chunk konnte nicht empfangen werden.'], 400);
+    }
+
+    $uploadDir = DATA_DIR . '/_backup_uploads';
+    if (!is_dir($uploadDir)) {
+        @mkdir($uploadDir, 0755, true);
+    }
+
+    // Veraltete abgebrochene Uploads (> 2 Stunden) aufräumen
+    foreach (glob($uploadDir . '/*.part') ?: [] as $oldPart) {
+        if (filemtime($oldPart) < time() - 7200) {
+            @unlink($oldPart);
+        }
+    }
+
+    $partPath = $uploadDir . '/' . $uploadId . '.part';
+    $chunkData = @file_get_contents($_FILES['chunk']['tmp_name']);
+    if ($chunkData === false) {
+        sendJson(['ok' => false, 'error' => 'Chunk-Daten konnten nicht gelesen werden.'], 500);
+    }
+
+    $flags = ($chunkIndex === 0) ? LOCK_EX : (FILE_APPEND | LOCK_EX);
+    if (@file_put_contents($partPath, $chunkData, $flags) === false) {
+        sendJson(['ok' => false, 'error' => 'Chunk konnte nicht zwischengespeichert werden.'], 500);
+    }
+
+    sendJson(['ok' => true, 'chunkIndex' => $chunkIndex, 'receivedBytes' => strlen($chunkData)]);
+}
+
+if ($action === 'import_backup_finalize') {
+    $body = getJsonBody();
+    $uploadId = preg_replace('/[^a-zA-Z0-9_-]/', '', (string)($body['uploadId'] ?? ''));
+    $mode = (($body['mode'] ?? 'merge') === 'replace') ? 'replace' : 'merge';
+    $fileType = (($body['fileType'] ?? 'zip') === 'json') ? 'json' : 'zip';
+
+    if ($uploadId === '' || strlen($uploadId) < 6) {
+        sendJson(['ok' => false, 'error' => 'Ungültige Upload-ID.'], 400);
+    }
+
+    $partPath = DATA_DIR . '/_backup_uploads/' . $uploadId . '.part';
+    if (!file_exists($partPath) || !is_file($partPath)) {
+        sendJson(['ok' => false, 'error' => 'Hochgeladene Backup-Datei nicht gefunden.'], 404);
+    }
+
+    $restoredFolders = 0;
+    $restoredNotebooks = 0;
+    $restoredFiles = 0;
+
+    // FALL A: Demo-JSON Backup (aus GitHub Pages Demo) direkt auf den PHP-Server importieren
+    if ($fileType === 'json') {
+        $rawJson = @file_get_contents($partPath);
+        @unlink($partPath);
+        $decoded = is_string($rawJson) ? json_decode($rawJson, true) : null;
+        if (!is_array($decoded) || !isset($decoded['folders']) || !isset($decoded['notebooks']) || !is_array($decoded['folders']) || !is_array($decoded['notebooks'])) {
+            sendJson(['ok' => false, 'error' => 'Ungültiges Mint-Board JSON-Backup.'], 400);
+        }
+
+        // Ordner übernehmen
+        if ($mode === 'replace') {
+            $nextFolders = ['folders' => array_values($decoded['folders']), 'lastModified' => nowMs()];
+            $restoredFolders = count($nextFolders['folders']);
+            writeJsonAtomic(FOLDERS_FILE, $nextFolders);
+            rrmdirRecursive(NOTEBOOKS_DIR);
+            @mkdir(NOTEBOOKS_DIR, 0755, true);
+        } else {
+            $existingFolders = readJsonFile(FOLDERS_FILE, ['folders' => []]);
+            $byId = [];
+            foreach ($existingFolders['folders'] ?? [] as $f) {
+                if (isset($f['id'])) $byId[$f['id']] = $f;
+            }
+            foreach ($decoded['folders'] as $f) {
+                if (!is_array($f) || empty($f['id'])) continue;
+                if (!isset($byId[$f['id']])) {
+                    $byId[$f['id']] = $f;
+                    $restoredFolders++;
+                }
+            }
+            writeJsonAtomic(FOLDERS_FILE, ['folders' => array_values($byId), 'lastModified' => nowMs()]);
+        }
+
+        // Hefte & Seiten übernehmen
+        foreach ($decoded['notebooks'] as $nbKey => $nbEntry) {
+            if (!is_array($nbEntry) || !isset($nbEntry['meta']) || !is_array($nbEntry['meta'])) continue;
+            $nbId = sanitizeId((string)($nbEntry['meta']['id'] ?? $nbKey), 'nb_');
+            $nbDir = NOTEBOOKS_DIR . '/' . $nbId;
+            $pagesDir = $nbDir . '/pages';
+            $assetsDir = $nbDir . '/assets';
+            @mkdir($pagesDir, 0755, true);
+            @mkdir($assetsDir, 0755, true);
+
+            $meta = $nbEntry['meta'];
+            $meta['id'] = $nbId;
+            writeJsonAtomic($nbDir . '/meta.json', $meta);
+            $restoredFiles++;
+
+            if (isset($nbEntry['pages']) && is_array($nbEntry['pages'])) {
+                foreach ($nbEntry['pages'] as $pageKey => $pageData) {
+                    if (!is_array($pageData)) continue;
+                    $pageId = sanitizeId((string)($pageData['id'] ?? $pageKey), 'page_');
+                    $pageData['id'] = $pageId;
+                    writeJsonAtomic($pagesDir . '/' . $pageId . '.json', $pageData);
+                    $restoredFiles++;
+                }
+            }
+            $restoredNotebooks++;
+        }
+
+        sendJson([
+            'ok'                => true,
+            'mode'              => $mode,
+            'restoredFolders'   => $restoredFolders,
+            'restoredNotebooks' => $restoredNotebooks,
+            'restoredFiles'     => $restoredFiles
+        ]);
+    }
+
+    // FALL B: Vollständiges Server-ZIP-Backup
+    if (!class_exists('ZipArchive')) {
+        @unlink($partPath);
+        sendJson(['ok' => false, 'error' => 'PHP ZipArchive-Erweiterung ist auf diesem Server nicht aktiviert.'], 500);
+    }
+
+    $zip = new ZipArchive();
+    if ($zip->open($partPath) !== true) {
+        @unlink($partPath);
+        sendJson(['ok' => false, 'error' => 'Die hochgeladene Datei ist kein gültiges ZIP-Archiv.'], 400);
+    }
+
+    $allowedAssetExts = ['png', 'jpg', 'jpeg', 'webp', 'gif', 'svg'];
+    $validEntries = [];
+    $hasFoldersJson = false;
+    $seenNotebooks = [];
+
+    // 1. Strenge Sicherheits- & Strukturprüfung aller ZIP-Einträge (Zip-Slip & Extension-Whitelist)
+    for ($i = 0; $i < $zip->numFiles; $i++) {
+        $name = str_replace('\\', '/', (string)$zip->getNameIndex($i));
+        if ($name === '' || substr($name, -1) === '/') continue;
+        if (strpos($name, '..') !== false || $name[0] === '/' || strpos($name, "\0") !== false) {
+            $zip->close();
+            @unlink($partPath);
+            sendJson(['ok' => false, 'error' => 'Unsicherer Dateipfad im Backup-Archiv erkannt.'], 400);
+        }
+
+        if ($name === 'backup-manifest.json') {
+            continue;
+        }
+        if ($name === 'folders.json') {
+            $hasFoldersJson = true;
+            continue;
+        }
+        if (preg_match('#^notebooks/([a-zA-Z0-9_\-]+)/meta\.json$#', $name, $m)) {
+            $validEntries[] = $name;
+            $seenNotebooks[$m[1]] = true;
+            continue;
+        }
+        if (preg_match('#^notebooks/([a-zA-Z0-9_\-]+)/pages/([a-zA-Z0-9_\-]+)\.json$#', $name, $m)) {
+            $validEntries[] = $name;
+            $seenNotebooks[$m[1]] = true;
+            continue;
+        }
+        if (preg_match('#^notebooks/([a-zA-Z0-9_\-]+)/assets/([a-zA-Z0-9_\-\.]+)$#', $name, $m)) {
+            $ext = strtolower(pathinfo($m[2], PATHINFO_EXTENSION));
+            if (in_array($ext, $allowedAssetExts, true)) {
+                $validEntries[] = $name;
+                $seenNotebooks[$m[1]] = true;
+            }
+            continue;
+        }
+    }
+
+    if (!$hasFoldersJson && count($validEntries) === 0) {
+        $zip->close();
+        @unlink($partPath);
+        sendJson(['ok' => false, 'error' => 'Das ZIP-Archiv enthält keine gültigen Mint-Board-Backup-Daten.'], 400);
+    }
+
+    // 2. Bei Voll-Restore: Rollback-Sicherung anlegen
+    $rollbackDir = null;
+    if ($mode === 'replace' && is_dir(NOTEBOOKS_DIR)) {
+        $rollbackDir = DATA_DIR . '/_restore_rollback_' . uniqid('', true);
+        if (!@rename(NOTEBOOKS_DIR, $rollbackDir)) {
+            $zip->close();
+            @unlink($partPath);
+            sendJson(['ok' => false, 'error' => 'Bestehende Hefte konnten vor dem Ersetzen nicht gesichert werden.'], 500);
+        }
+        @mkdir(NOTEBOOKS_DIR, 0755, true);
+    }
+
+    try {
+        // Ordner wiederherstellen / zusammenführen
+        if ($hasFoldersJson) {
+            $rawFolders = $zip->getFromName('folders.json');
+            $parsedFolders = is_string($rawFolders) ? json_decode($rawFolders, true) : null;
+            if (is_array($parsedFolders) && isset($parsedFolders['folders']) && is_array($parsedFolders['folders'])) {
+                if ($mode === 'replace') {
+                    writeJsonAtomic(FOLDERS_FILE, [
+                        'folders'      => array_values($parsedFolders['folders']),
+                        'lastModified' => nowMs()
+                    ]);
+                    $restoredFolders = count($parsedFolders['folders']);
+                } else {
+                    $existingFolders = readJsonFile(FOLDERS_FILE, ['folders' => []]);
+                    $byId = [];
+                    foreach ($existingFolders['folders'] ?? [] as $f) {
+                        if (isset($f['id'])) $byId[$f['id']] = $f;
+                    }
+                    foreach ($parsedFolders['folders'] as $f) {
+                        if (!is_array($f) || empty($f['id'])) continue;
+                        if (!isset($byId[$f['id']])) {
+                            $byId[$f['id']] = $f;
+                            $restoredFolders++;
+                        }
+                    }
+                    writeJsonAtomic(FOLDERS_FILE, [
+                        'folders'      => array_values($byId),
+                        'lastModified' => nowMs()
+                    ]);
+                }
+            }
+        }
+
+        // Validierte Notebook-Dateien extrahieren
+        foreach ($validEntries as $relPath) {
+            $content = $zip->getFromName($relPath);
+            if ($content === false) continue;
+            $destPath = DATA_DIR . '/' . $relPath;
+            $destDir = dirname($destPath);
+            if (!is_dir($destDir)) {
+                @mkdir($destDir, 0755, true);
+            }
+            if (@file_put_contents($destPath, $content, LOCK_EX) === false) {
+                throw new RuntimeException('Datei konnte nicht geschrieben werden: ' . $relPath);
+            }
+            $restoredFiles++;
+        }
+
+        $restoredNotebooks = count($seenNotebooks);
+        $zip->close();
+        @unlink($partPath);
+        if ($rollbackDir && is_dir($rollbackDir)) {
+            rrmdirRecursive($rollbackDir);
+        }
+
+        sendJson([
+            'ok'                => true,
+            'mode'              => $mode,
+            'restoredFolders'   => $restoredFolders,
+            'restoredNotebooks' => $restoredNotebooks,
+            'restoredFiles'     => $restoredFiles
+        ]);
+    } catch (Throwable $err) {
+        $zip->close();
+        @unlink($partPath);
+        if ($rollbackDir && is_dir($rollbackDir)) {
+            rrmdirRecursive(NOTEBOOKS_DIR);
+            @rename($rollbackDir, NOTEBOOKS_DIR);
+        }
+        sendJson(['ok' => false, 'error' => 'Wiederherstellung abgebrochen (Rollback ausgeführt): ' . $err->getMessage()], 500);
+    }
+}
+
 sendJson([
     'ok'    => false,
     'error' => 'Unbekannte API-Action: ' . htmlspecialchars($action)
