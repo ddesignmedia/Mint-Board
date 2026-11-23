@@ -2051,6 +2051,244 @@ body.pen-palm-shield-active .palm-shield-zone {
     line-height: 1.15;
 }
 
+.shape-catalog-drawer {
+    width: 248px;
+}
+
+.shape-catalog-item {
+    padding: 10px 6px;
+    gap: 6px;
+    color: #1e293b;
+}
+
+.shape-catalog-item svg {
+    display: block;
+    pointer-events: none;
+    color: #2b579a;
+}
+
+.shape-catalog-item.active {
+    border-color: var(--gn-blue-bar);
+    background: #eff6ff;
+    box-shadow: 0 0 0 2px rgba(43, 87, 154, 0.18);
+}
+
+.shape-catalog-item.active span {
+    color: var(--gn-blue-bar);
+}
+
+.shape-catalog-item-wide {
+    grid-column: span 2;
+    flex-direction: row;
+    justify-content: center;
+    gap: 10px;
+    padding: 8px 10px;
+}
+
+.shape-box-options {
+    padding: 10px 12px 12px;
+    border-top: 1px solid #e2e8f0;
+    background: #f8fafc;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+.shape-box-row {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.shape-box-row label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #475569;
+}
+
+.shape-box-radius-row {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 2px;
+}
+
+.shape-box-val {
+    font-size: 0.72rem;
+    font-weight: 800;
+    color: var(--gn-blue-bar);
+    font-variant-numeric: tabular-nums;
+}
+
+.shape-box-input {
+    width: 100%;
+    height: 30px;
+    padding: 0 9px;
+    border-radius: 8px;
+    border: 1.5px solid #cbd5e1;
+    background: #ffffff;
+    color: #0f172a;
+    font-size: 0.8rem;
+    font-weight: 600;
+    outline: none;
+    user-select: text;
+    -webkit-user-select: text;
+}
+
+.shape-box-input:focus {
+    border-color: var(--gn-blue-bar);
+    box-shadow: 0 0 0 2px rgba(43, 87, 154, 0.16);
+}
+
+.shape-box-presets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.shape-label-chip {
+    height: 24px;
+    padding: 0 8px;
+    border-radius: 999px;
+    border: 1px solid #cbd5e1;
+    background: #ffffff;
+    color: #334155;
+    font-size: 0.69rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.1s, border-color 0.1s, color 0.1s;
+}
+
+.shape-label-chip:hover {
+    border-color: var(--gn-accent-blue);
+    background: #eff6ff;
+}
+
+.shape-label-chip.active {
+    background: var(--gn-blue-bar);
+    border-color: var(--gn-blue-bar);
+    color: #ffffff;
+}
+
+/* Objekt-Eigenschaften-Inspektor (Hand-Werkzeug) */
+.obj-inspector-panel {
+    width: 262px;
+}
+
+.obj-insp-select {
+    width: 100%;
+    height: 30px;
+    padding: 0 8px;
+    border-radius: 8px;
+    border: 1.5px solid #cbd5e1;
+    background: #ffffff;
+    color: #0f172a;
+    font-size: 0.78rem;
+    font-weight: 600;
+    outline: none;
+    cursor: pointer;
+}
+
+.obj-insp-select:focus {
+    border-color: var(--gn-blue-bar);
+}
+
+.obj-insp-textarea {
+    width: 100%;
+    padding: 7px 9px;
+    border-radius: 8px;
+    border: 1.5px solid #cbd5e1;
+    background: #ffffff;
+    color: #0f172a;
+    font-family: inherit;
+    font-size: 0.8rem;
+    font-weight: 600;
+    resize: vertical;
+    min-height: 58px;
+    outline: none;
+    user-select: text;
+    -webkit-user-select: text;
+}
+
+.obj-insp-textarea:focus {
+    border-color: var(--gn-blue-bar);
+}
+
+.obj-insp-checks {
+    display: flex;
+    gap: 12px;
+    margin-top: 8px;
+    font-size: 0.76rem;
+    color: #334155;
+}
+
+.obj-insp-swatches {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-top: 8px;
+    flex-wrap: wrap;
+}
+
+.obj-color-dot {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 2px solid #ffffff;
+    box-shadow: 0 0 0 1.5px #cbd5e1;
+    cursor: pointer;
+    transition: transform 0.1s, box-shadow 0.12s;
+}
+
+.obj-color-dot:hover {
+    transform: scale(1.12);
+}
+
+.obj-color-dot.active {
+    box-shadow: 0 0 0 2.5px var(--gn-blue-bar);
+    transform: scale(1.12);
+}
+
+.obj-color-none {
+    background: linear-gradient(135deg, #ffffff 43%, #ef4444 45%, #ef4444 55%, #ffffff 57%);
+}
+
+.obj-insp-actions-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+}
+
+.obj-act-btn {
+    height: 30px;
+    border-radius: 8px;
+    border: 1px solid #cbd5e1;
+    background: #f8fafc;
+    color: #1e293b;
+    font-size: 0.74rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.1s, border-color 0.1s;
+}
+
+.obj-act-btn:hover {
+    background: #eff6ff;
+    border-color: var(--gn-accent-blue);
+    color: var(--gn-blue-bar);
+}
+
+.obj-act-danger {
+    background: #fef2f2;
+    border-color: #fecaca;
+    color: #dc2626;
+}
+
+.obj-act-danger:hover {
+    background: #dc2626;
+    border-color: #dc2626;
+    color: #ffffff;
+}
+
 .lab-insp-section {
     padding: 10px 12px;
     border-bottom: 1px solid #e2e8f0;
@@ -2599,4 +2837,422 @@ body.pen-palm-shield-active .palm-shield-zone {
     border-right: 2.5px solid rgba(255, 255, 255, 0.45);
     border-bottom: 2.5px solid rgba(255, 255, 255, 0.45);
     border-radius: 0 0 2px 0;
+}
+
+/* =========================================================================
+   TASCHENRECHNER-WIDGET (WISSENSCHAFTLICH, WINDOWS-RECHNER-STIL)
+   ========================================================================= */
+.cw-calc-widget:focus {
+    outline: none;
+    border-color: rgba(56, 189, 248, 0.75);
+}
+
+.cw-calc-widget .cw-body {
+    position: relative;
+    padding: 8px 10px 16px;
+    gap: 5px;
+}
+
+.cw-calc-widget .cw-resize-handle {
+    width: 16px;
+    height: 16px;
+}
+
+.cw-calc-widget .cw-resize-handle::after {
+    right: 3px;
+    bottom: 3px;
+    width: 8px;
+    height: 8px;
+}
+
+.cw-calc-display-box {
+    background: rgba(2, 6, 23, 0.55);
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    border-radius: 10px;
+    padding: 6px 10px 7px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex-shrink: 0;
+    min-height: 68px;
+    justify-content: space-between;
+}
+
+.cw-calc-top-strip {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 20px;
+}
+
+.cw-calc-mem-badge {
+    font-size: 0.65rem;
+    font-weight: 800;
+    padding: 1px 5px;
+    border-radius: 4px;
+    background: rgba(56, 189, 248, 0.25);
+    color: #38bdf8;
+    flex-shrink: 0;
+}
+
+.cw-calc-expr {
+    flex: 1;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.75rem;
+    color: #94a3b8;
+    text-align: right;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.cw-calc-hist-btn {
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    border: none;
+    background: rgba(255, 255, 255, 0.08);
+    color: #cbd5e1;
+    font-size: 0.72rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.cw-calc-hist-btn:hover {
+    background: rgba(56, 189, 248, 0.25);
+    color: #ffffff;
+}
+
+.cw-calc-readout {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 30px;
+    font-weight: 800;
+    line-height: 1.12;
+    color: #ffffff;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.cw-calc-readout.is-error {
+    color: #f87171;
+    font-family: inherit;
+    font-weight: 700;
+}
+
+/* Modus- & Funktions-Leiste (DEG / F-E / Trig / Fkt) */
+.cw-calc-mode-bar {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.cw-calc-drop-wrap {
+    position: relative;
+    flex: 1;
+    display: flex;
+}
+
+.cw-calc-mode-btn {
+    flex: 1;
+    height: 25px;
+    padding: 0 6px;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.07);
+    color: #e2e8f0;
+    font-size: 0.7rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.12s, border-color 0.12s;
+    white-space: nowrap;
+}
+
+.cw-calc-mode-btn:hover {
+    background: rgba(255, 255, 255, 0.16);
+}
+
+.cw-calc-mode-btn.active {
+    background: rgba(56, 189, 248, 0.28);
+    border-color: #38bdf8;
+    color: #7dd3fc;
+}
+
+/* Popover für Trigonometrie & Funktionen */
+.cw-calc-popover {
+    position: absolute;
+    top: calc(100% + 5px);
+    right: 0;
+    z-index: 25;
+    background: rgba(15, 23, 42, 0.98);
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    border-radius: 10px;
+    padding: 6px;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.5);
+    min-width: 215px;
+}
+
+.cw-calc-pop-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 4px;
+}
+
+.cw-calc-pop-grid-3 {
+    grid-template-columns: repeat(3, 1fr);
+    min-width: 170px;
+}
+
+.cw-calc-pop-btn {
+    height: 30px;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.09);
+    color: #f1f5f9;
+    font-size: 0.72rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.cw-calc-pop-btn:hover {
+    background: rgba(56, 189, 248, 0.28);
+    border-color: rgba(56, 189, 248, 0.6);
+}
+
+.cw-calc-pop-toggle.active {
+    background: #38bdf8;
+    color: #0f172a;
+    border-color: #38bdf8;
+    font-weight: 800;
+}
+
+/* Speicher-Leiste (MC / MR / M+ / M- / MS) */
+.cw-calc-mem-bar {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.cw-calc-mem-btn {
+    height: 22px;
+    border-radius: 5px;
+    border: none;
+    background: transparent;
+    color: #cbd5e1;
+    font-size: 0.68rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.cw-calc-mem-btn:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.12);
+    color: #ffffff;
+}
+
+.cw-calc-mem-btn:disabled {
+    opacity: 0.32;
+    cursor: default;
+}
+
+/* 5x7 Tastenfeld (Windows Wissenschaftlicher Rechner) */
+.cw-calc-grid {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    grid-template-rows: repeat(7, 1fr);
+    gap: 4px;
+    min-height: 0;
+}
+
+.cw-calc-btn {
+    border-radius: 7px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: #f8fafc;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 2px;
+    transition: background 0.08s, transform 0.06s, border-color 0.1s;
+    min-height: 0;
+    line-height: 1;
+}
+
+.cw-calc-btn:active {
+    transform: scale(0.95);
+}
+
+.cw-calc-btn sup,
+.cw-calc-btn sub {
+    font-size: 0.62em;
+    line-height: 0;
+}
+
+.cw-calc-fn {
+    background: rgba(255, 255, 255, 0.08);
+    color: #e2e8f0;
+    font-size: 0.76rem;
+}
+
+.cw-calc-fn:hover {
+    background: rgba(255, 255, 255, 0.16);
+}
+
+.cw-calc-fn.active {
+    background: #38bdf8;
+    color: #0f172a;
+    border-color: #38bdf8;
+    font-weight: 800;
+}
+
+.cw-calc-num {
+    background: rgba(255, 255, 255, 0.17);
+    color: #ffffff;
+    font-size: 0.94rem;
+    font-weight: 700;
+}
+
+.cw-calc-num:hover {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+.cw-calc-op {
+    background: rgba(56, 189, 248, 0.18);
+    border-color: rgba(56, 189, 248, 0.25);
+    color: #7dd3fc;
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.cw-calc-op:hover {
+    background: rgba(56, 189, 248, 0.32);
+    color: #ffffff;
+}
+
+.cw-calc-eq {
+    background: #38bdf8;
+    border-color: #38bdf8;
+    color: #0f172a;
+    font-size: 1.05rem;
+    font-weight: 800;
+}
+
+.cw-calc-eq:hover {
+    background: #7dd3fc;
+}
+
+.cw-calc-paren-count {
+    font-size: 0.62rem;
+    color: #38bdf8;
+    margin-left: 2px;
+    font-weight: 800;
+}
+
+/* Verlauf-Overlay */
+.cw-calc-history-overlay {
+    position: absolute;
+    inset: 8px 10px 16px;
+    background: rgba(15, 23, 42, 0.97);
+    border: 1px solid rgba(148, 163, 184, 0.3);
+    border-radius: 10px;
+    z-index: 30;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.cw-calc-hist-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #e2e8f0;
+}
+
+.cw-calc-hist-actions {
+    display: flex;
+    gap: 6px;
+}
+
+.cw-calc-hist-clear,
+.cw-calc-hist-close {
+    border: none;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.1);
+    color: #e2e8f0;
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 3px 8px;
+    cursor: pointer;
+}
+
+.cw-calc-hist-clear:hover {
+    background: rgba(239, 68, 68, 0.35);
+}
+
+.cw-calc-hist-close:hover {
+    background: rgba(255, 255, 255, 0.22);
+}
+
+.cw-calc-hist-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.cw-calc-hist-empty {
+    margin: auto;
+    font-size: 0.76rem;
+    color: #64748b;
+    text-align: center;
+}
+
+.cw-calc-hist-item {
+    width: 100%;
+    text-align: right;
+    padding: 7px 9px;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    background: rgba(255, 255, 255, 0.05);
+    color: #f8fafc;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.cw-calc-hist-item:hover {
+    background: rgba(56, 189, 248, 0.18);
+    border-color: rgba(56, 189, 248, 0.45);
+}
+
+.cw-calc-hist-expr {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.7rem;
+    color: #94a3b8;
+    word-break: break-all;
+}
+
+.cw-calc-hist-res {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.95rem;
+    color: #ffffff;
 }

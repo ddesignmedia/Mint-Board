@@ -42,7 +42,12 @@
         activeTool: 'pen',          // 'lasso' | 'pen' | 'eraser' | 'text' | 'sticker' | 'image' | 'shapes' | 'laser'
         penSubMode: 'ballpoint',    // 'ballpoint' | 'highlighter' | 'shape_draw'
         eraserMode: 'stroke',       // 'stroke' | 'partial'
-        shapeType: 'line',          // 'line' | 'arrow' | 'rect' | 'ellipse' | 'callout' | 'axes'
+        shapeType: 'line',          // 'line' | 'arrow' | 'rect' | 'ellipse' | 'callout' | 'axes' | 'info_box'
+        boxLabel: 'Merke',
+        boxRadius: 14,
+        boxLabelSize: 20,
+        shapeFillColor: 'none',     // 'none' | '#rrggbb'
+        shapeFillOpacity: 0.2,
         activeColor: '#111827',
 
         // 3 frei belegbare Strichstärken-Slots (separat für Kugelschreiber & Marker)
@@ -88,6 +93,10 @@
         // Interaktive Bild-Bearbeitung (Antippen, Verschieben, Skalieren, Drehen – PC & Touch)
         selectedImageId: null,
         imageDragState: null,       // { pointerId, mode: 'move'|'scale'|'rotate', imgId, startPt, origImg, corner }
+
+        // Interaktive Objekt-Auswahl (Hand-Werkzeug: Formen, Merkkästen & Texte)
+        selectedObject: null,       // { kind: 'shape'|'text', id: string }
+        objectDragState: null,      // { pointerId, kind, id, mode, startPt, orig, moved }
 
         // Interaktive Labor-Geräte (Chemix-Stil)
         selectedLabId: null,
@@ -876,6 +885,7 @@
 
         AppState.currentPageIndex = Math.max(0, Math.min(pageIndex, AppState.currentNotebook.pages.length - 1));
         clearLassoSelection();
+        clearObjectSelection();
         commitInlineTextIfActive();
 
         fitPageToViewport();
@@ -910,6 +920,7 @@
         if (!AppState.currentNotebook || index < 0 || index >= AppState.currentNotebook.pages.length) return;
         commitInlineTextIfActive();
         clearLassoSelection();
+        clearObjectSelection();
 
         // Falls aktuelle Seite ungespeicherte Änderungen hat, vor Seitenwechsel im Hintergrund sichern
         flushPendingPageSave();
@@ -1034,7 +1045,8 @@
                 ctx.drawImage(img, 0, 0, PAGE_WIDTH, PAGE_HEIGHT);
             }
         } else {
-            // 4. Prozedurale Vektor-Lineatur zeichnen
+            // 4. Prozedurale Vektor-Lineatur zeichnen (dezent: 50 % Transparenz für bessere Lesbarkeit)
+            ctx.globalAlpha = 0.5;
             const lineColor = paperColor === '#ffffff' ? '#d4dce6' : '#dcd5c4';
             const marginColor = '#e88b84';
 
@@ -1279,27 +1291,144 @@
             ctx.lineTo(x2 - headLen * Math.cos(angle + Math.PI / 6), y2 - headLen * Math.sin(angle + Math.PI / 6));
             ctx.stroke();
         } else if (s.shapeType === 'rect') {
+            if (s.fillColor && s.fillColor !== 'none') {
+                const fc = s.fillColor === 'auto' ? (s.color || '#111827') : s.fillColor;
+                const fo = typeof s.fillOpacity === 'number' ? s.fillOpacity : 0.2;
+                ctx.fillStyle = colorToRgba(fc, fo);
+                ctx.fillRect(rx, ry, rw, rh);
+            }
             ctx.strokeRect(rx, ry, rw, rh);
         } else if (s.shapeType === 'ellipse') {
             ctx.beginPath();
             ctx.ellipse(rx + rw / 2, ry + rh / 2, Math.max(1, rw / 2), Math.max(1, rh / 2), 0, 0, Math.PI * 2);
+            if (s.fillColor && s.fillColor !== 'none') {
+                const fc = s.fillColor === 'auto' ? (s.color || '#111827') : s.fillColor;
+                const fo = typeof s.fillOpacity === 'number' ? s.fillOpacity : 0.2;
+                ctx.fillStyle = colorToRgba(fc, fo);
+                ctx.fill();
+            }
             ctx.stroke();
         } else if (s.shapeType === 'callout') {
             // Sprechblase mit Spitze unten links (wie im Referenz-Screenshot "5 NTB")
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.92)';
             drawCalloutBubblePath(ctx, rx, ry, Math.max(60, rw), Math.max(40, rh));
-            ctx.fill();
+            if (s.fillColor !== 'none') {
+                const fc = (!s.fillColor || s.fillColor === 'auto') ? '#ffffff' : s.fillColor;
+                const fo = typeof s.fillOpacity === 'number' ? s.fillOpacity : 0.92;
+                ctx.fillStyle = colorToRgba(fc, fo);
+                ctx.fill();
+            }
             ctx.stroke();
         } else if (s.shapeType === 'axes') {
-            // Koordinatensystem mit Pfeilspitzen
+            // Koordinatensystem mit Pfeilspitzen (richtungsunabhängig)
+            const xMax = rx + rw;
+            const yMax = ry + rh;
+            const headLen = Math.max(10, Math.min(20, (s.width || 3.5) * 3.2));
             ctx.beginPath();
-            ctx.moveTo(rx, y2);
-            ctx.lineTo(x2, y2);
-            ctx.moveTo(rx, y2);
+            // X-Achse
+            ctx.moveTo(rx, yMax);
+            ctx.lineTo(xMax, yMax);
+            if (rw >= headLen * 1.5) {
+                ctx.moveTo(xMax, yMax);
+                ctx.lineTo(xMax - headLen, yMax - headLen * 0.55);
+                ctx.moveTo(xMax, yMax);
+                ctx.lineTo(xMax - headLen, yMax + headLen * 0.55);
+            }
+            // Y-Achse
+            ctx.moveTo(rx, yMax);
             ctx.lineTo(rx, ry);
+            if (rh >= headLen * 1.5) {
+                ctx.moveTo(rx, ry);
+                ctx.lineTo(rx - headLen * 0.55, ry + headLen);
+                ctx.moveTo(rx, ry);
+                ctx.lineTo(rx + headLen * 0.55, ry + headLen);
+            }
             ctx.stroke();
+        } else if (s.shapeType === 'info_box') {
+            // Merkkasten / Hervorhebungs-Kasten mit transparenter Füllung, abgerundeten Ecken & Label-Badge
+            const boxColor = s.color || '#2b579a';
+            const radius = Math.max(0, Math.min(typeof s.radius === 'number' ? s.radius : 14, rw / 2, rh / 2));
+
+            drawRoundedRectPath(ctx, rx, ry, rw, rh, radius);
+            if (s.fillColor !== 'none') {
+                const fc = (!s.fillColor || s.fillColor === 'auto') ? boxColor : s.fillColor;
+                const fo = typeof s.fillOpacity === 'number' ? s.fillOpacity : 0.13;
+                ctx.fillStyle = colorToRgba(fc, fo);
+                ctx.fill();
+            }
+            ctx.strokeStyle = boxColor;
+            ctx.stroke();
+
+            const lbl = (s.label || '').trim();
+            if (lbl && rw >= 30 && rh >= 20) {
+                const fontSize = Math.max(12, Math.min(48, typeof s.labelSize === 'number' ? s.labelSize : 20));
+                ctx.font = `700 ${fontSize}px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`;
+                const textW = ctx.measureText(lbl).width;
+                const padX = Math.round(fontSize * 0.65);
+                const badgeH = Math.round(fontSize * 1.55);
+                const badgeW = Math.min(Math.max(44, textW + padX * 2), Math.max(44, rw - 12));
+                const badgeX = rx + Math.min(Math.max(14, radius + 4), Math.max(8, rw - badgeW - 8));
+                const badgeY = ry - badgeH / 2;
+                const badgeR = Math.min(12, badgeH / 2, radius > 0 ? Math.max(6, radius * 0.65) : 4);
+
+                drawRoundedRectPath(ctx, badgeX, badgeY, badgeW, badgeH, badgeR);
+                ctx.fillStyle = boxColor;
+                ctx.fill();
+
+                ctx.save();
+                ctx.beginPath();
+                ctx.rect(badgeX + 4, badgeY, badgeW - 8, badgeH);
+                ctx.clip();
+                ctx.fillStyle = getContrastTextColor(boxColor);
+                ctx.textBaseline = 'middle';
+                ctx.textAlign = 'left';
+                ctx.fillText(lbl, badgeX + padX, badgeY + badgeH / 2 + 1);
+                ctx.restore();
+            }
         }
         ctx.restore();
+    }
+
+    function drawRoundedRectPath(ctx, x, y, w, h, r) {
+        const rad = Math.max(0, Math.min(r, w / 2, h / 2));
+        ctx.beginPath();
+        if (rad <= 0.5) {
+            ctx.rect(x, y, w, h);
+        } else {
+            ctx.moveTo(x + rad, y);
+            ctx.lineTo(x + w - rad, y);
+            ctx.quadraticCurveTo(x + w, y, x + w, y + rad);
+            ctx.lineTo(x + w, y + h - rad);
+            ctx.quadraticCurveTo(x + w, y + h, x + w - rad, y + h);
+            ctx.lineTo(x + rad, y + h);
+            ctx.quadraticCurveTo(x, y + h, x, y + h - rad);
+            ctx.lineTo(x, y + rad);
+            ctx.quadraticCurveTo(x, y, x + rad, y);
+        }
+        ctx.closePath();
+    }
+
+    function colorToRgba(hex, alpha) {
+        if (!hex || typeof hex !== 'string') return `rgba(43, 87, 154, ${alpha})`;
+        const m = hex.trim().match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
+        if (!m) return `rgba(43, 87, 154, ${alpha})`;
+        let h = m[1];
+        if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+        const r = parseInt(h.slice(0, 2), 16);
+        const g = parseInt(h.slice(2, 4), 16);
+        const b = parseInt(h.slice(4, 6), 16);
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+
+    function getContrastTextColor(hex) {
+        const m = (hex || '').trim().match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
+        if (!m) return '#ffffff';
+        let h = m[1];
+        if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+        const r = parseInt(h.slice(0, 2), 16);
+        const g = parseInt(h.slice(2, 4), 16);
+        const b = parseInt(h.slice(4, 6), 16);
+        const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+        return luminance > 0.72 ? '#111827' : '#ffffff';
     }
 
     function drawCalloutBubblePath(ctx, x, y, w, h) {
@@ -1664,6 +1793,14 @@
                 return;
             }
             AppState.touchPointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+            if (AppState.touchPointers.size === 1 && (AppState.activeTool === 'select' || AppState.selectedObject)) {
+                refreshCanvasRectCache();
+                const pt = clientToPageCoords(e.clientX, e.clientY);
+                if (tryStartSelectToolInteraction(e.pointerId, pt, AppState.activeTool === 'select')) {
+                    AppState.pinchState = null;
+                    return;
+                }
+            }
             if (AppState.touchPointers.size === 1 && (AppState.activeTool === 'lab' || AppState.selectedLabId)) {
                 refreshCanvasRectCache();
                 const pt = clientToPageCoords(e.clientX, e.clientY);
@@ -1683,6 +1820,7 @@
             if (AppState.touchPointers.size === 2) {
                 AppState.imageDragState = null;
                 AppState.labDragState = null;
+                AppState.objectDragState = null;
                 startTwoFingerPinchPan();
             } else {
                 AppState.pinchState = null;
@@ -1762,6 +1900,23 @@
             return;
         }
 
+        if (effectiveTool === 'select') {
+            if (tryStartSelectToolInteraction(e.pointerId, pt, true)) {
+                return;
+            }
+            AppState.isPenDrawing = false;
+            AppState.activePenPointerId = null;
+            clearAllSelectionsForHandTool();
+            return;
+        }
+
+        if (AppState.selectedObject && effectiveTool !== 'eraser' && effectiveTool !== 'laser') {
+            if (tryStartObjectInteraction(e.pointerId, pt, false)) {
+                return;
+            }
+            clearObjectSelection();
+        }
+
         if (effectiveTool === 'lab') {
             if (tryStartLabInteraction(e.pointerId, pt, true)) {
                 return;
@@ -1817,9 +1972,10 @@
 
         if (effectiveTool === 'shapes' || (effectiveTool === 'pen' && AppState.penSubMode === 'shape_draw')) {
             saveHistorySnapshot();
+            const shapeKind = AppState.shapeType || 'line';
             AppState.activeShapeDraft = {
                 id: 'shp_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
-                shapeType: AppState.shapeType || 'line',
+                shapeType: shapeKind,
                 color: AppState.activeColor,
                 width: getCurrentStrokeWidth(),
                 x1: pt.x,
@@ -1827,6 +1983,20 @@
                 x2: pt.x,
                 y2: pt.y
             };
+            if (shapeKind === 'info_box') {
+                AppState.activeShapeDraft.label = AppState.boxLabel || '';
+                AppState.activeShapeDraft.radius = typeof AppState.boxRadius === 'number' ? AppState.boxRadius : 14;
+                AppState.activeShapeDraft.labelSize = typeof AppState.boxLabelSize === 'number' ? AppState.boxLabelSize : 20;
+                if (AppState.shapeFillColor && AppState.shapeFillColor !== 'none') {
+                    AppState.activeShapeDraft.fillColor = AppState.shapeFillColor;
+                    AppState.activeShapeDraft.fillOpacity = AppState.shapeFillOpacity;
+                }
+            } else if (shapeKind === 'rect' || shapeKind === 'ellipse' || shapeKind === 'callout') {
+                if (AppState.shapeFillColor && AppState.shapeFillColor !== 'none') {
+                    AppState.activeShapeDraft.fillColor = AppState.shapeFillColor;
+                    AppState.activeShapeDraft.fillOpacity = AppState.shapeFillOpacity;
+                }
+            }
             drawUIOverlay();
             return;
         }
@@ -1859,7 +2029,13 @@
 
         // FALL A: 1-FINGER BILD-/LABOR-TRANSFORMATION ODER 2-FINGER-TOUCH PAN & PINCH-TO-ZOOM
         if (e.pointerType === 'touch') {
-            if (AppState.labDragState && e.pointerId === AppState.labDragState.pointerId) {
+            if (AppState.objectDragState && e.pointerId === AppState.objectDragState.pointerId) {
+            e.preventDefault();
+            updateObjectInteraction(clientToPageCoords(e.clientX, e.clientY));
+            return;
+        }
+
+        if (AppState.labDragState && e.pointerId === AppState.labDragState.pointerId) {
                 e.preventDefault();
                 updateLabInteraction(clientToPageCoords(e.clientX, e.clientY));
                 return;
@@ -1876,6 +2052,12 @@
             if (AppState.touchPointers.size === 2 && AppState.pinchState) {
                 updateTwoFingerPinchPan();
             }
+            return;
+        }
+
+        if (AppState.objectDragState && e.pointerId === AppState.objectDragState.pointerId) {
+            e.preventDefault();
+            updateObjectInteraction(clientToPageCoords(e.clientX, e.clientY));
             return;
         }
 
@@ -1961,9 +2143,12 @@
 
         if (AppState.activeShapeDraft) {
             const p = clientToPageCoords(e.clientX, e.clientY);
-            const snapped = applyAngleSnapIfNear(AppState.activeShapeDraft.x1, AppState.activeShapeDraft.y1, p.x, p.y);
-            AppState.activeShapeDraft.x2 = snapped.x;
-            AppState.activeShapeDraft.y2 = snapped.y;
+            const useAngleSnap = (AppState.activeShapeDraft.shapeType === 'line' || AppState.activeShapeDraft.shapeType === 'arrow');
+            const targetPt = useAngleSnap
+                ? applyAngleSnapIfNear(AppState.activeShapeDraft.x1, AppState.activeShapeDraft.y1, p.x, p.y)
+                : p;
+            AppState.activeShapeDraft.x2 = targetPt.x;
+            AppState.activeShapeDraft.y2 = targetPt.y;
             drawUIOverlay();
             return;
         }
@@ -2118,6 +2303,16 @@
     }
 
     function onViewportPointerUp(e) {
+        if (AppState.objectDragState && e.pointerId === AppState.objectDragState.pointerId) {
+            finishObjectInteraction();
+            AppState.isPenDrawing = false;
+            AppState.activePenPointerId = null;
+            if (e.pointerType === 'touch') {
+                AppState.touchPointers.delete(e.pointerId);
+            }
+            return;
+        }
+
         if (AppState.labDragState && e.pointerId === AppState.labDragState.pointerId) {
             finishLabInteraction();
             AppState.isPenDrawing = false;
@@ -3208,6 +3403,728 @@
     }
 
     // =========================================================================
+    // 11c. HAND-WERKZEUG: OBJEKT-AUSWAHL, VERSCHIEBEN, SKALIEREN & INSPEKTOR
+    // =========================================================================
+    function getSelectedObjectData() {
+        const sel = AppState.selectedObject;
+        if (!sel) return null;
+        const pageData = getCurrentPageData();
+        if (!pageData) return null;
+        if (sel.kind === 'shape') {
+            return (pageData.shapes || []).find(s => s.id === sel.id) || null;
+        }
+        if (sel.kind === 'text') {
+            return (pageData.texts || []).find(t => t.id === sel.id) || null;
+        }
+        return null;
+    }
+
+    function clearObjectSelection() {
+        AppState.selectedObject = null;
+        AppState.objectDragState = null;
+        syncObjectInspectorUI();
+        drawUIOverlay();
+    }
+
+    function clearAllSelectionsForHandTool() {
+        AppState.selectedObject = null;
+        AppState.objectDragState = null;
+        AppState.selectedImageId = null;
+        AppState.imageDragState = null;
+        AppState.selectedLabId = null;
+        AppState.labDragState = null;
+        if (window.WebNotesLab) window.WebNotesLab.syncLabInspectorUI();
+        syncObjectInspectorUI();
+        drawUIOverlay();
+    }
+
+    function hitTestShapeAt(s, pt) {
+        if (!s) return false;
+        const pad = Math.max(20, (s.width || 4) + 12);
+        const rx = Math.min(s.x1, s.x2);
+        const ry = Math.min(s.y1, s.y2);
+        const rw = Math.abs(s.x2 - s.x1);
+        const rh = Math.abs(s.y2 - s.y1);
+
+        if (s.shapeType === 'line' || s.shapeType === 'arrow') {
+            return distToSegment(pt, { x: s.x1, y: s.y1 }, { x: s.x2, y: s.y2 }) <= pad;
+        }
+        if (s.shapeType === 'axes') {
+            const xMax = rx + rw;
+            const yMax = ry + rh;
+            const dX = distToSegment(pt, { x: rx, y: yMax }, { x: xMax, y: yMax });
+            const dY = distToSegment(pt, { x: rx, y: yMax }, { x: rx, y: ry });
+            return Math.min(dX, dY) <= pad;
+        }
+        if (s.shapeType === 'info_box') {
+            // Inklusive oberem Label-Badge-Bereich (skaliert mit Schriftgröße)
+            const topPad = Math.max(20, Math.round(((s.labelSize || 20) * 1.55) / 2) + 6);
+            return pt.x >= rx - 10 && pt.x <= rx + rw + 10 && pt.y >= ry - topPad && pt.y <= ry + rh + 10;
+        }
+        return pt.x >= rx - 10 && pt.x <= rx + rw + 10 && pt.y >= ry - 10 && pt.y <= ry + rh + 10;
+    }
+
+    function hitTestTextAt(t, pt) {
+        if (!t) return false;
+        const w = t.w || 120;
+        const h = t.h || 44;
+        return pt.x >= t.x - 10 && pt.x <= t.x + w + 10 && pt.y >= t.y - 10 && pt.y <= t.y + h + 10;
+    }
+
+    function getShapeHandleHit(s, pt) {
+        const hitR = 22;
+        if (s.shapeType === 'line' || s.shapeType === 'arrow') {
+            if (Math.hypot(pt.x - s.x1, pt.y - s.y1) <= hitR) return 'p1';
+            if (Math.hypot(pt.x - s.x2, pt.y - s.y2) <= hitR) return 'p2';
+            return null;
+        }
+        const rx = Math.min(s.x1, s.x2);
+        const ry = Math.min(s.y1, s.y2);
+        const rw = Math.abs(s.x2 - s.x1);
+        const rh = Math.abs(s.y2 - s.y1);
+        const corners = [
+            ['nw', rx, ry],
+            ['ne', rx + rw, ry],
+            ['se', rx + rw, ry + rh],
+            ['sw', rx, ry + rh]
+        ];
+        for (const [name, cx, cy] of corners) {
+            if (Math.hypot(pt.x - cx, pt.y - cy) <= hitR) return name;
+        }
+        return null;
+    }
+
+    function tryStartObjectInteraction(pointerId, pt, allowNewSelect) {
+        const pageData = getCurrentPageData();
+        if (!pageData) return false;
+
+        // 1. Zuerst Griffe / Körper des bereits ausgewählten Objekts prüfen
+        if (AppState.selectedObject) {
+            const curr = getSelectedObjectData();
+            if (curr) {
+                if (AppState.selectedObject.kind === 'shape') {
+                    const handle = getShapeHandleHit(curr, pt);
+                    if (handle) {
+                        AppState.objectDragState = {
+                            pointerId,
+                            kind: 'shape',
+                            id: curr.id,
+                            mode: handle,
+                            startPt: { x: pt.x, y: pt.y },
+                            orig: {
+                                x1: curr.x1, y1: curr.y1, x2: curr.x2, y2: curr.y2,
+                                rx: Math.min(curr.x1, curr.x2),
+                                ry: Math.min(curr.y1, curr.y2),
+                                rw: Math.abs(curr.x2 - curr.x1),
+                                rh: Math.abs(curr.y2 - curr.y1)
+                            },
+                            moved: false
+                        };
+                        return true;
+                    }
+                    if (hitTestShapeAt(curr, pt)) {
+                        AppState.objectDragState = {
+                            pointerId,
+                            kind: 'shape',
+                            id: curr.id,
+                            mode: 'move',
+                            startPt: { x: pt.x, y: pt.y },
+                            orig: { x1: curr.x1, y1: curr.y1, x2: curr.x2, y2: curr.y2 },
+                            moved: false
+                        };
+                        return true;
+                    }
+                } else if (AppState.selectedObject.kind === 'text') {
+                    if (hitTestTextAt(curr, pt)) {
+                        AppState.objectDragState = {
+                            pointerId,
+                            kind: 'text',
+                            id: curr.id,
+                            mode: 'move',
+                            startPt: { x: pt.x, y: pt.y },
+                            orig: { x: curr.x, y: curr.y },
+                            moved: false
+                        };
+                        return true;
+                    }
+                }
+            }
+        }
+
+        if (!allowNewSelect) return false;
+
+        // 2. Neues Textfeld auswählen (von oben nach unten)
+        const texts = pageData.texts || [];
+        for (let i = texts.length - 1; i >= 0; i--) {
+            if (hitTestTextAt(texts[i], pt)) {
+                AppState.selectedImageId = null;
+                AppState.selectedLabId = null;
+                if (window.WebNotesLab) window.WebNotesLab.syncLabInspectorUI();
+                AppState.selectedObject = { kind: 'text', id: texts[i].id };
+                AppState.objectDragState = {
+                    pointerId,
+                    kind: 'text',
+                    id: texts[i].id,
+                    mode: 'move',
+                    startPt: { x: pt.x, y: pt.y },
+                    orig: { x: texts[i].x, y: texts[i].y },
+                    moved: false
+                };
+                syncObjectInspectorUI();
+                drawUIOverlay();
+                return true;
+            }
+        }
+
+        // 3. Neue Form / Merkkasten auswählen (von oben nach unten)
+        const shapes = pageData.shapes || [];
+        for (let i = shapes.length - 1; i >= 0; i--) {
+            if (hitTestShapeAt(shapes[i], pt)) {
+                AppState.selectedImageId = null;
+                AppState.selectedLabId = null;
+                if (window.WebNotesLab) window.WebNotesLab.syncLabInspectorUI();
+                AppState.selectedObject = { kind: 'shape', id: shapes[i].id };
+                AppState.objectDragState = {
+                    pointerId,
+                    kind: 'shape',
+                    id: shapes[i].id,
+                    mode: 'move',
+                    startPt: { x: pt.x, y: pt.y },
+                    orig: { x1: shapes[i].x1, y1: shapes[i].y1, x2: shapes[i].x2, y2: shapes[i].y2 },
+                    moved: false
+                };
+                syncObjectInspectorUI();
+                drawUIOverlay();
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    function tryStartSelectToolInteraction(pointerId, pt, allowNewSelect) {
+        // 1. Formen & Texte prüfen
+        if (tryStartObjectInteraction(pointerId, pt, allowNewSelect)) {
+            return true;
+        }
+        // 2. Laborgeräte prüfen
+        if (tryStartLabInteraction(pointerId, pt, allowNewSelect)) {
+            AppState.selectedObject = null;
+            AppState.selectedImageId = null;
+            syncObjectInspectorUI();
+            drawUIOverlay();
+            return true;
+        }
+        // 3. Bilder prüfen
+        if (tryStartImageInteraction(pointerId, pt, allowNewSelect)) {
+            AppState.selectedObject = null;
+            AppState.selectedLabId = null;
+            if (window.WebNotesLab) window.WebNotesLab.syncLabInspectorUI();
+            syncObjectInspectorUI();
+            drawUIOverlay();
+            return true;
+        }
+        return false;
+    }
+
+    function updateObjectInteraction(pt) {
+        const drag = AppState.objectDragState;
+        if (!drag) return;
+        const obj = getSelectedObjectData();
+        if (!obj) return;
+
+        const dx = pt.x - drag.startPt.x;
+        const dy = pt.y - drag.startPt.y;
+        if (!drag.moved && Math.hypot(dx, dy) < 2) return;
+
+        if (!drag.moved) {
+            saveHistorySnapshot();
+            drag.moved = true;
+        }
+
+        if (drag.kind === 'text') {
+            obj.x = drag.orig.x + dx;
+            obj.y = drag.orig.y + dy;
+        } else if (drag.kind === 'shape') {
+            if (drag.mode === 'move') {
+                obj.x1 = drag.orig.x1 + dx;
+                obj.y1 = drag.orig.y1 + dy;
+                obj.x2 = drag.orig.x2 + dx;
+                obj.y2 = drag.orig.y2 + dy;
+            } else if (drag.mode === 'p1') {
+                obj.x1 = pt.x;
+                obj.y1 = pt.y;
+            } else if (drag.mode === 'p2') {
+                obj.x2 = pt.x;
+                obj.y2 = pt.y;
+            } else {
+                // Eck-Skalierung (nw, ne, se, sw)
+                let left = drag.orig.rx;
+                let top = drag.orig.ry;
+                let right = drag.orig.rx + drag.orig.rw;
+                let bottom = drag.orig.ry + drag.orig.rh;
+                const minSize = 24;
+                if (drag.mode.includes('w')) left = Math.min(right - minSize, drag.orig.rx + dx);
+                if (drag.mode.includes('e')) right = Math.max(left + minSize, drag.orig.rx + drag.orig.rw + dx);
+                if (drag.mode.includes('n')) top = Math.min(bottom - minSize, drag.orig.ry + dy);
+                if (drag.mode.includes('s')) bottom = Math.max(top + minSize, drag.orig.ry + drag.orig.rh + dy);
+                obj.x1 = left;
+                obj.y1 = top;
+                obj.x2 = right;
+                obj.y2 = bottom;
+            }
+        }
+
+        redrawMainCanvas();
+        drawUIOverlay();
+    }
+
+    function finishObjectInteraction() {
+        const drag = AppState.objectDragState;
+        AppState.objectDragState = null;
+        if (drag && drag.moved) {
+            triggerPageAutoSave();
+            scheduleThumbnailRefresh(AppState.currentPageIndex);
+        }
+        drawUIOverlay();
+    }
+
+    function drawSelectedObjectHandles(ctx) {
+        const sel = AppState.selectedObject;
+        if (!sel) return;
+        const obj = getSelectedObjectData();
+        if (!obj) return;
+
+        ctx.save();
+        if (sel.kind === 'shape' && (obj.shapeType === 'line' || obj.shapeType === 'arrow')) {
+            ctx.strokeStyle = '#0066ff';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([6, 4]);
+            ctx.beginPath();
+            ctx.moveTo(obj.x1, obj.y1);
+            ctx.lineTo(obj.x2, obj.y2);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            for (const [hx, hy] of [[obj.x1, obj.y1], [obj.x2, obj.y2]]) {
+                ctx.fillStyle = '#ffffff';
+                ctx.strokeStyle = '#0066ff';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.arc(hx, hy, 9, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+            }
+        } else {
+            let rx, ry, rw, rh;
+            if (sel.kind === 'shape') {
+                rx = Math.min(obj.x1, obj.x2);
+                ry = Math.min(obj.y1, obj.y2);
+                rw = Math.abs(obj.x2 - obj.x1);
+                rh = Math.abs(obj.y2 - obj.y1);
+            } else {
+                rx = obj.x;
+                ry = obj.y;
+                rw = obj.w || 120;
+                rh = obj.h || 44;
+            }
+            ctx.strokeStyle = '#0066ff';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([6, 4]);
+            ctx.strokeRect(rx - 4, ry - 4, rw + 8, rh + 8);
+            ctx.setLineDash([]);
+
+            if (sel.kind === 'shape') {
+                const corners = [
+                    [rx, ry], [rx + rw, ry], [rx + rw, ry + rh], [rx, ry + rh]
+                ];
+                for (const [cx, cy] of corners) {
+                    ctx.fillStyle = '#ffffff';
+                    ctx.strokeStyle = '#0066ff';
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, 9, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+                }
+            }
+        }
+        ctx.restore();
+    }
+
+    function syncObjectInspectorUI() {
+        const panel = document.getElementById('object-inspector-panel');
+        if (!panel) return;
+        const sel = AppState.selectedObject;
+        const obj = getSelectedObjectData();
+        if (!sel || !obj) {
+            panel.classList.add('hidden');
+            return;
+        }
+        panel.classList.remove('hidden');
+
+        const titleEl = document.getElementById('obj-insp-title');
+        const shapeSec = document.getElementById('obj-insp-shape-section');
+        const boxSec = document.getElementById('obj-insp-box-section');
+        const textSec = document.getElementById('obj-insp-text-section');
+        const fillSec = document.getElementById('obj-insp-fill-section');
+        const colorCustom = document.getElementById('obj-insp-color-custom');
+
+        if (sel.kind === 'shape') {
+            if (titleEl) titleEl.textContent = obj.shapeType === 'info_box' ? '✋ Merkkasten bearbeiten' : '✋ Form bearbeiten';
+            if (shapeSec) shapeSec.classList.remove('hidden');
+            if (textSec) textSec.classList.add('hidden');
+
+            const typeSel = document.getElementById('obj-insp-shape-type');
+            if (typeSel) typeSel.value = obj.shapeType || 'rect';
+
+            const wSlider = document.getElementById('obj-insp-width');
+            const wVal = document.getElementById('obj-insp-width-val');
+            const wNum = obj.width || 4;
+            if (wSlider) wSlider.value = String(wNum);
+            if (wVal) wVal.textContent = Number(wNum).toFixed(1) + ' px';
+
+            const isBox = obj.shapeType === 'info_box';
+            const isFillable = (obj.shapeType === 'rect' || obj.shapeType === 'ellipse' || obj.shapeType === 'callout' || obj.shapeType === 'info_box');
+            if (boxSec) boxSec.classList.toggle('hidden', !isBox);
+            if (fillSec) fillSec.classList.toggle('hidden', !isFillable);
+
+            if (isFillable) {
+                const effFill = obj.fillColor !== undefined
+                    ? obj.fillColor
+                    : (isBox ? (obj.color || '#2b579a') : (obj.shapeType === 'callout' ? '#ffffff' : 'none'));
+                const effOp = typeof obj.fillOpacity === 'number'
+                    ? obj.fillOpacity
+                    : (isBox ? 0.13 : (obj.shapeType === 'callout' ? 0.92 : 0.2));
+                const fillCustom = document.getElementById('obj-insp-fill-custom');
+                const fillOpSlider = document.getElementById('obj-insp-fill-opacity');
+                const fillOpVal = document.getElementById('obj-insp-fill-opacity-val');
+                if (fillCustom && /^#[0-9a-f]{6}$/i.test(effFill)) {
+                    fillCustom.value = effFill;
+                }
+                if (fillOpSlider) fillOpSlider.value = String(Math.round(effOp * 100));
+                if (fillOpVal) fillOpVal.textContent = Math.round(effOp * 100) + ' %';
+                panel.querySelectorAll('[data-obj-fill]').forEach(dot => {
+                    dot.classList.toggle('active', (dot.dataset.objFill || '').toLowerCase() === String(effFill).toLowerCase());
+                });
+            }
+            if (isBox) {
+                const lblInp = document.getElementById('obj-insp-label');
+                const radInp = document.getElementById('obj-insp-radius');
+                const radVal = document.getElementById('obj-insp-radius-val');
+                const lsInp = document.getElementById('obj-insp-labelsize');
+                const lsVal = document.getElementById('obj-insp-labelsize-val');
+                const lbl = obj.label || '';
+                const rad = typeof obj.radius === 'number' ? obj.radius : 14;
+                const lsz = typeof obj.labelSize === 'number' ? obj.labelSize : 20;
+                if (lblInp) lblInp.value = lbl;
+                if (radInp) radInp.value = String(rad);
+                if (radVal) radVal.textContent = rad + ' px';
+                if (lsInp) lsInp.value = String(lsz);
+                if (lsVal) lsVal.textContent = lsz + ' px';
+                panel.querySelectorAll('[data-insp-preset]').forEach(c => {
+                    c.classList.toggle('active', c.dataset.inspPreset === lbl.trim());
+                });
+            }
+        } else if (sel.kind === 'text') {
+            if (titleEl) titleEl.textContent = '✋ Textfeld bearbeiten';
+            if (shapeSec) shapeSec.classList.add('hidden');
+            if (boxSec) boxSec.classList.add('hidden');
+            if (fillSec) fillSec.classList.add('hidden');
+            if (textSec) textSec.classList.remove('hidden');
+
+            const txtArea = document.getElementById('obj-insp-text');
+            const fsSel = document.getElementById('obj-insp-fontsize');
+            const boxChk = document.getElementById('obj-insp-hasbox');
+            const bubChk = document.getElementById('obj-insp-hasbubble');
+            if (txtArea) txtArea.value = obj.text || '';
+            if (fsSel) fsSel.value = String(obj.fontSize || 24);
+            if (boxChk) boxChk.checked = Boolean(obj.hasBox);
+            if (bubChk) bubChk.checked = Boolean(obj.hasBubble);
+        }
+
+        const currColor = (obj.color || '#111827').toLowerCase();
+        if (colorCustom && /^#[0-9a-f]{6}$/i.test(currColor)) {
+            colorCustom.value = currColor;
+        }
+        panel.querySelectorAll('[data-obj-color]').forEach(dot => {
+            dot.classList.toggle('active', (dot.dataset.objColor || '').toLowerCase() === currColor);
+        });
+    }
+
+    function initObjectInspectorEvents() {
+        const panel = document.getElementById('object-inspector-panel');
+        if (!panel) return;
+
+        panel.addEventListener('pointerdown', (e) => e.stopPropagation());
+
+        const btnClose = document.getElementById('btn-close-obj-inspector');
+        if (btnClose) btnClose.addEventListener('click', () => clearObjectSelection());
+
+        function commitObjectEdit(mutator, saveUndo = true) {
+            const obj = getSelectedObjectData();
+            if (!obj) return;
+            if (saveUndo) saveHistorySnapshot();
+            mutator(obj);
+            redrawMainCanvas();
+            drawUIOverlay();
+            syncObjectInspectorUI();
+            triggerPageAutoSave();
+            scheduleThumbnailRefresh(AppState.currentPageIndex);
+        }
+
+        // Form-Typ wechseln
+        const typeSel = document.getElementById('obj-insp-shape-type');
+        if (typeSel) {
+            typeSel.addEventListener('change', () => {
+                commitObjectEdit((obj) => {
+                    obj.shapeType = typeSel.value;
+                    if (obj.shapeType === 'info_box') {
+                        if (obj.label === undefined) obj.label = AppState.boxLabel || 'Merke';
+                        if (typeof obj.radius !== 'number') obj.radius = AppState.boxRadius ?? 14;
+                        if (typeof obj.labelSize !== 'number') obj.labelSize = AppState.boxLabelSize ?? 20;
+                    }
+                });
+            });
+        }
+
+        // Linienstärke
+        const wSlider = document.getElementById('obj-insp-width');
+        if (wSlider) {
+            wSlider.addEventListener('pointerdown', () => saveHistorySnapshot());
+            wSlider.addEventListener('input', () => {
+                const v = parseFloat(wSlider.value) || 4;
+                commitObjectEdit((obj) => { obj.width = v; }, false);
+            });
+        }
+
+        // Merkkasten-Label
+        const lblInp = document.getElementById('obj-insp-label');
+        if (lblInp) {
+            lblInp.addEventListener('keydown', (e) => e.stopPropagation());
+            lblInp.addEventListener('focus', () => saveHistorySnapshot());
+            lblInp.addEventListener('input', () => {
+                const obj = getSelectedObjectData();
+                if (!obj) return;
+                obj.label = lblInp.value;
+                panel.querySelectorAll('[data-insp-preset]').forEach(c => {
+                    c.classList.toggle('active', c.dataset.inspPreset === obj.label.trim());
+                });
+                redrawMainCanvas();
+                drawUIOverlay();
+                triggerPageAutoSave();
+                scheduleThumbnailRefresh(AppState.currentPageIndex);
+            });
+        }
+
+        panel.querySelectorAll('[data-insp-preset]').forEach(chip => {
+            chip.addEventListener('click', () => {
+                const val = chip.dataset.inspPreset || '';
+                commitObjectEdit((obj) => { obj.label = val; });
+            });
+        });
+
+        // Merkkasten-Radius
+        const radInp = document.getElementById('obj-insp-radius');
+        if (radInp) {
+            radInp.addEventListener('pointerdown', () => saveHistorySnapshot());
+            radInp.addEventListener('input', () => {
+                const r = parseInt(radInp.value, 10) || 0;
+                commitObjectEdit((obj) => { obj.radius = r; }, false);
+            });
+        }
+
+        // Merkkasten-Label-Schriftgröße
+        const lsInp = document.getElementById('obj-insp-labelsize');
+        if (lsInp) {
+            lsInp.addEventListener('pointerdown', () => saveHistorySnapshot());
+            lsInp.addEventListener('input', () => {
+                const sz = parseInt(lsInp.value, 10) || 20;
+                commitObjectEdit((obj) => { obj.labelSize = sz; }, false);
+            });
+        }
+
+        // Textfeld bearbeiten
+        const txtArea = document.getElementById('obj-insp-text');
+        if (txtArea) {
+            txtArea.addEventListener('keydown', (e) => e.stopPropagation());
+            txtArea.addEventListener('focus', () => saveHistorySnapshot());
+            txtArea.addEventListener('input', () => {
+                const obj = getSelectedObjectData();
+                if (!obj) return;
+                obj.text = txtArea.value;
+                obj.w = 0; obj.h = 0; // Neu berechnen lassen
+                redrawMainCanvas();
+                drawUIOverlay();
+                triggerPageAutoSave();
+                scheduleThumbnailRefresh(AppState.currentPageIndex);
+            });
+        }
+
+        const fsSel = document.getElementById('obj-insp-fontsize');
+        if (fsSel) {
+            fsSel.addEventListener('change', () => {
+                commitObjectEdit((obj) => {
+                    obj.fontSize = parseInt(fsSel.value, 10) || 24;
+                    obj.w = 0; obj.h = 0;
+                });
+            });
+        }
+
+        const boxChk = document.getElementById('obj-insp-hasbox');
+        if (boxChk) {
+            boxChk.addEventListener('change', () => {
+                commitObjectEdit((obj) => { obj.hasBox = boxChk.checked; });
+            });
+        }
+
+        const bubChk = document.getElementById('obj-insp-hasbubble');
+        if (bubChk) {
+            bubChk.addEventListener('change', () => {
+                commitObjectEdit((obj) => { obj.hasBubble = bubChk.checked; });
+            });
+        }
+
+        // Farben
+        panel.querySelectorAll('[data-obj-color]').forEach(dot => {
+            dot.addEventListener('click', () => {
+                commitObjectEdit((obj) => { obj.color = dot.dataset.objColor; });
+            });
+        });
+
+        const colorCustom = document.getElementById('obj-insp-color-custom');
+        if (colorCustom) {
+            colorCustom.addEventListener('focus', () => saveHistorySnapshot());
+            colorCustom.addEventListener('input', () => {
+                commitObjectEdit((obj) => { obj.color = colorCustom.value; }, false);
+            });
+        }
+
+        // Füllfarbe & Deckkraft im Inspektor
+        panel.querySelectorAll('[data-obj-fill]').forEach(dot => {
+            dot.addEventListener('click', () => {
+                const fc = dot.dataset.objFill;
+                commitObjectEdit((obj) => {
+                    obj.fillColor = fc;
+                    if (fc !== 'none' && typeof obj.fillOpacity !== 'number') {
+                        obj.fillOpacity = obj.shapeType === 'info_box' ? 0.15 : (obj.shapeType === 'callout' ? 0.92 : 0.2);
+                    }
+                });
+            });
+        });
+
+        const fillCustom = document.getElementById('obj-insp-fill-custom');
+        if (fillCustom) {
+            fillCustom.addEventListener('focus', () => saveHistorySnapshot());
+            fillCustom.addEventListener('input', () => {
+                commitObjectEdit((obj) => {
+                    obj.fillColor = fillCustom.value;
+                    if (typeof obj.fillOpacity !== 'number') {
+                        obj.fillOpacity = obj.shapeType === 'info_box' ? 0.15 : 0.2;
+                    }
+                }, false);
+            });
+        }
+
+        const fillOpSlider = document.getElementById('obj-insp-fill-opacity');
+        if (fillOpSlider) {
+            fillOpSlider.addEventListener('pointerdown', () => saveHistorySnapshot());
+            fillOpSlider.addEventListener('input', () => {
+                const pct = parseInt(fillOpSlider.value, 10) || 20;
+                commitObjectEdit((obj) => {
+                    obj.fillOpacity = pct / 100;
+                    if (!obj.fillColor || obj.fillColor === 'none') {
+                        obj.fillColor = obj.color || '#0066ff';
+                    }
+                }, false);
+            });
+        }
+
+        // Aktionen: Nach vorn, Nach hinten, Duplizieren, Löschen
+        const btnFront = document.getElementById('btn-obj-front');
+        if (btnFront) {
+            btnFront.addEventListener('click', () => {
+                const pageData = getCurrentPageData();
+                const sel = AppState.selectedObject;
+                if (!pageData || !sel) return;
+                const list = sel.kind === 'shape' ? pageData.shapes : pageData.texts;
+                const idx = (list || []).findIndex(x => x.id === sel.id);
+                if (idx >= 0 && idx < list.length - 1) {
+                    saveHistorySnapshot();
+                    const [item] = list.splice(idx, 1);
+                    list.push(item);
+                    redrawMainCanvas();
+                    drawUIOverlay();
+                    triggerPageAutoSave();
+                }
+            });
+        }
+
+        const btnBack = document.getElementById('btn-obj-back');
+        if (btnBack) {
+            btnBack.addEventListener('click', () => {
+                const pageData = getCurrentPageData();
+                const sel = AppState.selectedObject;
+                if (!pageData || !sel) return;
+                const list = sel.kind === 'shape' ? pageData.shapes : pageData.texts;
+                const idx = (list || []).findIndex(x => x.id === sel.id);
+                if (idx > 0) {
+                    saveHistorySnapshot();
+                    const [item] = list.splice(idx, 1);
+                    list.unshift(item);
+                    redrawMainCanvas();
+                    drawUIOverlay();
+                    triggerPageAutoSave();
+                }
+            });
+        }
+
+        const btnDup = document.getElementById('btn-obj-duplicate');
+        if (btnDup) {
+            btnDup.addEventListener('click', () => {
+                const pageData = getCurrentPageData();
+                const sel = AppState.selectedObject;
+                const obj = getSelectedObjectData();
+                if (!pageData || !sel || !obj) return;
+                saveHistorySnapshot();
+                const copy = JSON.parse(JSON.stringify(obj));
+                copy.id = (sel.kind === 'shape' ? 'shp_' : 'txt_') + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+                if (sel.kind === 'shape') {
+                    copy.x1 += 24; copy.y1 += 24; copy.x2 += 24; copy.y2 += 24;
+                    pageData.shapes.push(copy);
+                } else {
+                    copy.x += 24; copy.y += 24;
+                    pageData.texts.push(copy);
+                }
+                AppState.selectedObject = { kind: sel.kind, id: copy.id };
+                redrawMainCanvas();
+                drawUIOverlay();
+                syncObjectInspectorUI();
+                triggerPageAutoSave();
+                scheduleThumbnailRefresh(AppState.currentPageIndex);
+            });
+        }
+
+        const btnDel = document.getElementById('btn-obj-delete');
+        if (btnDel) {
+            btnDel.addEventListener('click', () => {
+                const pageData = getCurrentPageData();
+                const sel = AppState.selectedObject;
+                if (!pageData || !sel) return;
+                saveHistorySnapshot();
+                if (sel.kind === 'shape') {
+                    pageData.shapes = (pageData.shapes || []).filter(s => s.id !== sel.id);
+                } else if (sel.kind === 'text') {
+                    pageData.texts = (pageData.texts || []).filter(t => t.id !== sel.id);
+                }
+                clearObjectSelection();
+                redrawMainCanvas();
+                triggerPageAutoSave();
+                scheduleThumbnailRefresh(AppState.currentPageIndex);
+            });
+        }
+    }
+
+    // =========================================================================
     // 12. UI-OVERLAY (LASSO-BOX, FORMEN-VORSCHAU, LASERPOINTER)
     // =========================================================================
     function drawUIOverlay() {
@@ -3267,6 +4184,11 @@
             if (labObj) {
                 drawImageTransformHandles(uiCtx, labObj);
             }
+        }
+
+        // 3d. Interaktive Auswahl- & Skaliergriffe für das Hand-Werkzeug (Formen & Texte)
+        if (AppState.selectedObject) {
+            drawSelectedObjectHandles(uiCtx);
         }
 
         // 4. Laserpointer-Nachleuchtspur
@@ -3351,6 +4273,7 @@
         const prev = h.undo.pop();
         Object.assign(pageData, prev);
         clearLassoSelection();
+        clearObjectSelection();
         redrawMainCanvas();
         updateUndoRedoButtons();
         triggerPageAutoSave();
@@ -3367,6 +4290,7 @@
         const next = h.redo.pop();
         Object.assign(pageData, next);
         clearLassoSelection();
+        clearObjectSelection();
         redrawMainCanvas();
         updateUndoRedoButtons();
         triggerPageAutoSave();
@@ -3593,15 +4517,21 @@
     function setActiveTool(toolName) {
         commitInlineTextIfActive();
         if (toolName !== 'lasso') clearLassoSelection();
-        if (toolName !== 'image') {
+        if (toolName !== 'select') {
+            clearObjectSelection();
+        }
+        if (toolName !== 'image' && toolName !== 'select') {
             AppState.selectedImageId = null;
         }
-        if (toolName !== 'lab') {
+        if (toolName !== 'lab' && toolName !== 'select') {
             AppState.selectedLabId = null;
             if (window.WebNotesLab) {
                 window.WebNotesLab.openLabDrawer(false);
                 window.WebNotesLab.syncLabInspectorUI();
             }
+        }
+        if (DOM.uiCanvas && !AppState.mousePanState) {
+            DOM.uiCanvas.style.cursor = toolName === 'select' ? 'default' : 'crosshair';
         }
         drawUIOverlay();
         AppState.activeTool = toolName;
@@ -3622,12 +4552,19 @@
         if (labGroup) labGroup.classList.add('hidden');
         extraWrap.classList.add('hidden');
 
+        const shapeDrawer = document.getElementById('shape-catalog-drawer');
+        const isShapeMode = (toolName === 'shapes' || (toolName === 'pen' && AppState.penSubMode === 'shape_draw'));
+        if (shapeDrawer && !isShapeMode) {
+            shapeDrawer.classList.add('hidden');
+        }
+
         if (toolName === 'eraser') {
             extraWrap.classList.remove('hidden');
             eraserGroup.classList.remove('hidden');
-        } else if (toolName === 'shapes' || (toolName === 'pen' && AppState.penSubMode === 'shape_draw')) {
+        } else if (isShapeMode) {
             extraWrap.classList.remove('hidden');
             shapeGroup.classList.remove('hidden');
+            if (shapeDrawer) shapeDrawer.classList.remove('hidden');
         } else if (toolName === 'image' && imageGroup) {
             extraWrap.classList.remove('hidden');
             imageGroup.classList.remove('hidden');
@@ -4141,13 +5078,121 @@
             triggerPageAutoSave();
         });
 
+        const shapeDrawerEl = document.getElementById('shape-catalog-drawer');
+        const btnOpenShapeDrawer = document.getElementById('btn-shape-open-catalog');
+        const btnCloseShapeDrawer = document.getElementById('btn-close-shape-drawer');
+        const shapeActiveLabelEl = document.getElementById('shape-active-label');
+        const shapeBoxOptionsEl = document.getElementById('shape-box-options');
+        const shapeFillOptionsEl = document.getElementById('shape-fill-options');
+        const shapeBoxLabelInput = document.getElementById('shape-box-label-input');
+        const shapeBoxRadiusInput = document.getElementById('shape-box-radius');
+        const shapeBoxRadiusVal = document.getElementById('shape-box-radius-val');
+
+        function syncShapeBoxOptionsUI() {
+            if (shapeBoxOptionsEl) {
+                shapeBoxOptionsEl.classList.toggle('hidden', AppState.shapeType !== 'info_box');
+            }
+            if (shapeFillOptionsEl) {
+                const isFillable = (AppState.shapeType === 'rect' || AppState.shapeType === 'ellipse' || AppState.shapeType === 'callout' || AppState.shapeType === 'info_box');
+                shapeFillOptionsEl.classList.toggle('hidden', !isFillable);
+            }
+        }
+
+        if (shapeDrawerEl) {
+            shapeDrawerEl.addEventListener('pointerdown', (e) => e.stopPropagation());
+        }
+        if (btnOpenShapeDrawer && shapeDrawerEl) {
+            btnOpenShapeDrawer.addEventListener('click', () => {
+                shapeDrawerEl.classList.toggle('hidden');
+            });
+        }
+        if (btnCloseShapeDrawer && shapeDrawerEl) {
+            btnCloseShapeDrawer.addEventListener('click', () => {
+                shapeDrawerEl.classList.add('hidden');
+            });
+        }
+
+        if (shapeBoxLabelInput) {
+            shapeBoxLabelInput.addEventListener('keydown', (e) => e.stopPropagation());
+            shapeBoxLabelInput.addEventListener('input', () => {
+                AppState.boxLabel = shapeBoxLabelInput.value;
+                document.querySelectorAll('[data-box-preset]').forEach(ch => {
+                    ch.classList.toggle('active', ch.dataset.boxPreset === AppState.boxLabel.trim());
+                });
+            });
+        }
+
+        document.querySelectorAll('[data-box-preset]').forEach(chip => {
+            chip.addEventListener('click', () => {
+                const val = chip.dataset.boxPreset || '';
+                AppState.boxLabel = val;
+                if (shapeBoxLabelInput) shapeBoxLabelInput.value = val;
+                document.querySelectorAll('[data-box-preset]').forEach(c => c.classList.remove('active'));
+                chip.classList.add('active');
+            });
+        });
+
+        if (shapeBoxRadiusInput) {
+            shapeBoxRadiusInput.addEventListener('input', () => {
+                const r = parseInt(shapeBoxRadiusInput.value, 10) || 0;
+                AppState.boxRadius = r;
+                if (shapeBoxRadiusVal) shapeBoxRadiusVal.textContent = r + ' px';
+            });
+        }
+
+        const shapeBoxLabelSizeInput = document.getElementById('shape-box-labelsize');
+        const shapeBoxLabelSizeVal = document.getElementById('shape-box-labelsize-val');
+        if (shapeBoxLabelSizeInput) {
+            shapeBoxLabelSizeInput.addEventListener('input', () => {
+                const sz = parseInt(shapeBoxLabelSizeInput.value, 10) || 20;
+                AppState.boxLabelSize = sz;
+                if (shapeBoxLabelSizeVal) shapeBoxLabelSizeVal.textContent = sz + ' px';
+            });
+        }
+
+        // Füllfarbe & Deckkraft im Formen-Katalog (für neue Formen)
+        const shapeFillCustom = document.getElementById('shape-fill-custom');
+        const shapeFillOpacityInput = document.getElementById('shape-fill-opacity');
+        const shapeFillOpacityVal = document.getElementById('shape-fill-opacity-val');
+
+        document.querySelectorAll('[data-shape-fill]').forEach(dot => {
+            dot.addEventListener('click', () => {
+                AppState.shapeFillColor = dot.dataset.shapeFill || 'none';
+                document.querySelectorAll('[data-shape-fill]').forEach(d => d.classList.remove('active'));
+                dot.classList.add('active');
+                if (shapeFillCustom && /^#[0-9a-f]{6}$/i.test(AppState.shapeFillColor)) {
+                    shapeFillCustom.value = AppState.shapeFillColor;
+                }
+            });
+        });
+
+        if (shapeFillCustom) {
+            shapeFillCustom.addEventListener('input', () => {
+                AppState.shapeFillColor = shapeFillCustom.value;
+                document.querySelectorAll('[data-shape-fill]').forEach(d => d.classList.remove('active'));
+            });
+        }
+
+        if (shapeFillOpacityInput) {
+            shapeFillOpacityInput.addEventListener('input', () => {
+                const pct = parseInt(shapeFillOpacityInput.value, 10) || 20;
+                AppState.shapeFillOpacity = pct / 100;
+                if (shapeFillOpacityVal) shapeFillOpacityVal.textContent = pct + ' %';
+            });
+        }
+
         document.querySelectorAll('[data-shape-type]').forEach(btn => {
             btn.addEventListener('click', () => {
                 AppState.shapeType = btn.dataset.shapeType;
                 document.querySelectorAll('[data-shape-type]').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
+                if (shapeActiveLabelEl) {
+                    shapeActiveLabelEl.textContent = btn.dataset.shapeLabel || btn.textContent.trim();
+                }
+                syncShapeBoxOptionsUI();
             });
         });
+        syncShapeBoxOptionsUI();
 
         // Lasso-Kontextmenü Aktionen
         document.getElementById('lasso-btn-delete').addEventListener('click', () => {
@@ -4280,7 +5325,15 @@
                 e.preventDefault();
                 performRedo();
             } else if (e.key === 'Delete' || e.key === 'Backspace') {
-                if (AppState.lassoSelection) {
+                if (AppState.selectedObject) {
+                    e.preventDefault();
+                    const delObjBtn = document.getElementById('btn-obj-delete');
+                    if (delObjBtn) delObjBtn.click();
+                } else if (AppState.selectedImageId) {
+                    e.preventDefault();
+                    const delImgBtn = document.getElementById('img-btn-delete');
+                    if (delImgBtn) delImgBtn.click();
+                } else if (AppState.lassoSelection) {
                     e.preventDefault();
                     document.getElementById('lasso-btn-delete').click();
                 } else if (AppState.selectedLabId) {
@@ -4293,9 +5346,13 @@
         window.addEventListener('keyup', (e) => {
             if (e.code === 'Space') {
                 AppState.isSpacePressed = false;
-                if (DOM.uiCanvas && !AppState.mousePanState) DOM.uiCanvas.style.cursor = 'crosshair';
+                if (DOM.uiCanvas && !AppState.mousePanState) {
+                    DOM.uiCanvas.style.cursor = AppState.activeTool === 'select' ? 'default' : 'crosshair';
+                }
             }
         });
+
+        initObjectInspectorEvents();
     }
 
     function showCanvasToast(msg) {

@@ -11,7 +11,7 @@
     <meta name="theme-color" content="#2b579a">
     <meta name="format-detection" content="telephone=no">
     <title>WebNotes – Tafelheft &amp; Notizen</title>
-    <link rel="stylesheet" href="style.css?v=20261119_5">
+    <link rel="stylesheet" href="style.css?v=20261123_5">
 </head>
 <body class="no-select">
 
@@ -147,6 +147,16 @@
 
                 <!-- Mitte: Hauptwerkzeuge (ohne Mikrofon/Audio!) -->
                 <div class="top-bar-center" role="toolbar" aria-label="Hauptwerkzeuge">
+                    <!-- 0. Objekt-Auswahl / Hand-Werkzeug -->
+                    <button type="button" class="tool-btn" data-tool="select" title="Objekt-Auswahl / Hand (Formen, Merkkästen, Texte, Bilder &amp; Laborgeräte per Klick auswählen, verschieben &amp; bearbeiten)">
+                        <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M18 11V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2"></path>
+                            <path d="M14 10V4a2 2 0 0 0-2-2a2 2 0 0 0-2 2v2"></path>
+                            <path d="M10 10.5V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2v8"></path>
+                            <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"></path>
+                        </svg>
+                    </button>
+
                     <!-- 1. Lasso-Auswahl -->
                     <button type="button" class="tool-btn" data-tool="lasso" title="Lasso-Auswahl (Verschieben, Skalieren, Umfärben, Duplizieren)">
                         <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -191,15 +201,7 @@
                         </svg>
                     </button>
 
-                    <!-- 7. Formen-Werkzeug -->
-                    <button type="button" class="tool-btn" data-tool="shapes" title="Geometrische Formen, Pfeile, Koordinatensystem &amp; Sprechblasen">
-                        <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <rect x="3" y="3" width="9" height="9" rx="1"></rect>
-                            <circle cx="16.5" cy="16.5" r="5.5"></circle>
-                        </svg>
-                    </button>
-
-                    <!-- 8. Seiten-Vorlage / Papierwahl -->
+                    <!-- 6. Seiten-Vorlage / Papierwahl -->
                     <button type="button" class="tool-btn" id="btn-paper-template" title="Papierfarbe, Lineatur &amp; Cover-Vorlage dieser Seite ändern">
                         <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
@@ -232,8 +234,8 @@
                         </svg>
                     </button>
 
-                    <!-- 11. Schwebende Unterrichts-Widgets (Uhr / Stoppuhr / Countdown – nicht im PDF) -->
-                    <button type="button" class="tool-btn" id="btn-toggle-widgets" title="Unterrichts-Widgets einfügen (Uhr, Stoppuhr, Countdown, Ampel – bleiben fest &amp; erscheinen nicht im PDF)">
+                    <!-- 11. Schwebende Unterrichts-Widgets (Uhr / Stoppuhr / Countdown / Taschenrechner – nicht im PDF) -->
+                    <button type="button" class="tool-btn" id="btn-toggle-widgets" title="Unterrichts-Widgets einfügen (Uhr, Stoppuhr, Countdown, Ampel, Taschenrechner – bleiben fest &amp; erscheinen nicht im PDF)">
                         <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <circle cx="12" cy="13" r="8"></circle>
                             <polyline points="12 9 12 13 15 15"></polyline>
@@ -369,14 +371,9 @@
                             <button type="button" class="chip-btn" data-eraser-mode="partial" title="Radiert präzise nur den übermalten Teilbereich">Teil-Radierer</button>
                             <button type="button" id="btn-clear-page" class="chip-btn chip-danger" title="Alle eigenen Striche auf dieser Seite löschen">Seite leeren</button>
                         </div>
-                        <!-- Geometrische Formen-Auswahl -->
+                        <!-- Geometrische Formen-Auswahl (öffnet schwebenden Katalog) -->
                         <div id="shape-options" class="extra-group hidden">
-                            <button type="button" class="chip-btn active" data-shape-type="line" title="Gerade Linie">Linie</button>
-                            <button type="button" class="chip-btn" data-shape-type="arrow" title="Pfeil">Pfeil</button>
-                            <button type="button" class="chip-btn" data-shape-type="rect" title="Rechteck / Kasten">Rechteck</button>
-                            <button type="button" class="chip-btn" data-shape-type="ellipse" title="Kreis / Ellipse">Kreis</button>
-                            <button type="button" class="chip-btn" data-shape-type="callout" title="Sprechblase">Sprechblase</button>
-                            <button type="button" class="chip-btn" data-shape-type="axes" title="Koordinatensystem (Achsenkreuz)">Achsenkreuz</button>
+                            <button type="button" id="btn-shape-open-catalog" class="chip-btn active" title="Formen-Katalog öffnen / schließen">△ <span id="shape-active-label">Linie</span> ▾</button>
                         </div>
                         <!-- Bild-Werkzeug Optionen -->
                         <div id="image-options" class="extra-group hidden">
@@ -431,6 +428,10 @@
                     <button type="button" class="widget-menu-item" data-spawn-widget="random">
                         <span class="wm-icon">🎲</span>
                         <span class="wm-text"><strong>Zufallszahl</strong><small>Zufällige Auswahl (z. B. 1–28)</small></span>
+                    </button>
+                    <button type="button" class="widget-menu-item" data-spawn-widget="calculator">
+                        <span class="wm-icon">🧮</span>
+                        <span class="wm-text"><strong>Taschenrechner</strong><small>Wissenschaftlich (wie Windows-Rechner)</small></span>
                     </button>
                 </div>
             </div>
@@ -550,6 +551,244 @@
                         <span>Breite</span>
                     </button>
                 </div>
+
+                <!-- Schwebender Formen-Katalog (analog zum Chemie-Labor) -->
+                <aside id="shape-catalog-drawer" class="lab-floating-panel lab-catalog-drawer shape-catalog-drawer palm-shield-zone hidden">
+                    <div class="lab-panel-header">
+                        <span class="lab-panel-title">△ Formen</span>
+                        <button type="button" id="btn-close-shape-drawer" class="lab-panel-close" title="Katalog schließen">✕</button>
+                    </div>
+                    <div id="shape-catalog-grid" class="lab-catalog-grid shape-catalog-grid">
+                        <button type="button" class="lab-catalog-item shape-catalog-item active" data-shape-type="line" data-shape-label="Linie" title="Gerade Linie">
+                            <svg viewBox="0 0 48 48" width="44" height="44" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round">
+                                <line x1="8" y1="38" x2="40" y2="10"></line>
+                            </svg>
+                            <span>Linie</span>
+                        </button>
+                        <button type="button" class="lab-catalog-item shape-catalog-item" data-shape-type="arrow" data-shape-label="Pfeil" title="Pfeil">
+                            <svg viewBox="0 0 48 48" width="44" height="44" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="8" y1="38" x2="39" y2="11"></line>
+                                <polyline points="26 10 40 10 38 24"></polyline>
+                            </svg>
+                            <span>Pfeil</span>
+                        </button>
+                        <button type="button" class="lab-catalog-item shape-catalog-item" data-shape-type="rect" data-shape-label="Rechteck" title="Rechteck / Kasten">
+                            <svg viewBox="0 0 48 48" width="44" height="44" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round">
+                                <rect x="8" y="12" width="32" height="24" rx="2"></rect>
+                            </svg>
+                            <span>Rechteck</span>
+                        </button>
+                        <button type="button" class="lab-catalog-item shape-catalog-item" data-shape-type="ellipse" data-shape-label="Kreis" title="Kreis / Ellipse">
+                            <svg viewBox="0 0 48 48" width="44" height="44" fill="none" stroke="currentColor" stroke-width="3">
+                                <ellipse cx="24" cy="24" rx="16" ry="13"></ellipse>
+                            </svg>
+                            <span>Kreis</span>
+                        </button>
+                        <button type="button" class="lab-catalog-item shape-catalog-item" data-shape-type="callout" data-shape-label="Sprechblase" title="Sprechblase">
+                            <svg viewBox="0 0 48 48" width="44" height="44" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linejoin="round">
+                                <path d="M10 11 h28 a4 4 0 0 1 4 4 v14 a4 4 0 0 1 -4 4 h-16 l-8 7 v-7 h-4 a4 4 0 0 1 -4 -4 v-14 a4 4 0 0 1 4 -4 z"></path>
+                            </svg>
+                            <span>Sprechblase</span>
+                        </button>
+                        <button type="button" class="lab-catalog-item shape-catalog-item" data-shape-type="axes" data-shape-label="Achsenkreuz" title="Koordinatensystem (Achsenkreuz)">
+                            <svg viewBox="0 0 48 48" width="44" height="44" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="11" y1="38" x2="11" y2="9"></line>
+                                <polyline points="7 14 11 8 15 14"></polyline>
+                                <line x1="8" y1="35" x2="40" y2="35"></line>
+                                <polyline points="35 31 41 35 35 39"></polyline>
+                            </svg>
+                            <span>Achsenkreuz</span>
+                        </button>
+                        <button type="button" class="lab-catalog-item shape-catalog-item shape-catalog-item-wide" data-shape-type="info_box" data-shape-label="Merkkasten" title="Hervorhebungs-Kasten mit transparenter Füllung, Label &amp; abgerundeten Ecken">
+                            <svg viewBox="0 0 72 44" width="66" height="40" fill="none">
+                                <rect x="4" y="12" width="64" height="28" rx="7" fill="currentColor" fill-opacity="0.14" stroke="currentColor" stroke-width="2.6"></rect>
+                                <rect x="12" y="5" width="32" height="13" rx="5" fill="currentColor"></rect>
+                                <line x1="17" y1="11.5" x2="39" y2="11.5" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round"></line>
+                            </svg>
+                            <span>Merkkasten (Label)</span>
+                        </button>
+                    </div>
+
+                    <!-- Optionen für Merkkasten (sichtbar wenn Merkkasten gewählt ist) -->
+                    <div id="shape-box-options" class="shape-box-options hidden">
+                        <div class="shape-box-row">
+                            <label for="shape-box-label-input">Label-Text</label>
+                            <input type="text" id="shape-box-label-input" class="shape-box-input" value="Merke" maxlength="28" placeholder="z. B. Merke, Definition...">
+                        </div>
+                        <div class="shape-box-presets">
+                            <button type="button" class="shape-label-chip active" data-box-preset="Merke">Merke</button>
+                            <button type="button" class="shape-label-chip" data-box-preset="Definition">Definition</button>
+                            <button type="button" class="shape-label-chip" data-box-preset="Experiment">Experiment</button>
+                            <button type="button" class="shape-label-chip" data-box-preset="Wichtig">Wichtig</button>
+                            <button type="button" class="shape-label-chip" data-box-preset="Beispiel">Beispiel</button>
+                            <button type="button" class="shape-label-chip" data-box-preset="">Ohne</button>
+                        </div>
+                        <div class="shape-box-row shape-box-radius-row">
+                            <label for="shape-box-radius">Ecken-Radius</label>
+                            <span id="shape-box-radius-val" class="shape-box-val">14 px</span>
+                        </div>
+                        <input type="range" id="shape-box-radius" class="lab-range" min="0" max="32" step="2" value="14">
+                        <div class="shape-box-row shape-box-radius-row">
+                            <label for="shape-box-labelsize">Label-Größe</label>
+                            <span id="shape-box-labelsize-val" class="shape-box-val">20 px</span>
+                        </div>
+                        <input type="range" id="shape-box-labelsize" class="lab-range" min="14" max="36" step="2" value="20">
+                    </div>
+
+                    <!-- Füllfarbe für neue Formen (Rechteck, Kreis, Sprechblase, Merkkasten) -->
+                    <div id="shape-fill-options" class="shape-box-options hidden">
+                        <div class="lab-insp-row-head">
+                            <span>Füllfarbe</span>
+                            <label class="lab-color-custom-wrap" title="Eigene Füllfarbe wählen">
+                                <span>Eigene</span>
+                                <input type="color" id="shape-fill-custom" value="#0066ff">
+                            </label>
+                        </div>
+                        <div class="obj-insp-swatches">
+                            <button type="button" class="obj-color-dot obj-color-none active" data-shape-fill="none" title="Keine Füllung (transparent)"></button>
+                            <button type="button" class="obj-color-dot" data-shape-fill="#ffffff" style="background:#ffffff;" title="Weiß"></button>
+                            <button type="button" class="obj-color-dot" data-shape-fill="#fef08a" style="background:#fef08a;" title="Gelb"></button>
+                            <button type="button" class="obj-color-dot" data-shape-fill="#0066ff" style="background:#0066ff;" title="Blau"></button>
+                            <button type="button" class="obj-color-dot" data-shape-fill="#68b82e" style="background:#68b82e;" title="Grün"></button>
+                            <button type="button" class="obj-color-dot" data-shape-fill="#ff0000" style="background:#ff0000;" title="Rot"></button>
+                            <button type="button" class="obj-color-dot" data-shape-fill="#9333ea" style="background:#9333ea;" title="Violett"></button>
+                        </div>
+                        <div class="shape-box-row shape-box-radius-row">
+                            <label for="shape-fill-opacity">Deckkraft</label>
+                            <span id="shape-fill-opacity-val" class="shape-box-val">20 %</span>
+                        </div>
+                        <input type="range" id="shape-fill-opacity" class="lab-range" min="5" max="100" step="5" value="20">
+                    </div>
+                </aside>
+
+                <!-- Schwebender Objekt-Eigenschaften-Inspektor (Hand-Werkzeug: Formen, Merkkästen & Texte bearbeiten) -->
+                <aside id="object-inspector-panel" class="lab-floating-panel lab-inspector-panel obj-inspector-panel palm-shield-zone hidden">
+                    <div class="lab-panel-header">
+                        <span id="obj-insp-title" class="lab-panel-title">✋ Objekt bearbeiten</span>
+                        <button type="button" id="btn-close-obj-inspector" class="lab-panel-close" title="Auswahl aufheben">✕</button>
+                    </div>
+
+                    <!-- Bereich: Form-Typ & Strichstärke (für Formen) -->
+                    <div id="obj-insp-shape-section" class="lab-insp-section hidden">
+                        <div class="shape-box-row">
+                            <label for="obj-insp-shape-type">Form</label>
+                            <select id="obj-insp-shape-type" class="obj-insp-select">
+                                <option value="info_box">Merkkasten (Label)</option>
+                                <option value="rect">Rechteck</option>
+                                <option value="ellipse">Kreis / Ellipse</option>
+                                <option value="line">Linie</option>
+                                <option value="arrow">Pfeil</option>
+                                <option value="callout">Sprechblase</option>
+                                <option value="axes">Achsenkreuz</option>
+                            </select>
+                        </div>
+                        <div class="shape-box-row shape-box-radius-row" style="margin-top:8px;">
+                            <label for="obj-insp-width">Linienstärke</label>
+                            <span id="obj-insp-width-val" class="shape-box-val">4.0 px</span>
+                        </div>
+                        <input type="range" id="obj-insp-width" class="lab-range" min="1" max="24" step="0.5" value="4">
+                    </div>
+
+                    <!-- Bereich: Merkkasten-Label & Ecken-Radius (nur für Merkkasten) -->
+                    <div id="obj-insp-box-section" class="lab-insp-section hidden">
+                        <div class="shape-box-row">
+                            <label for="obj-insp-label">Label-Text</label>
+                            <input type="text" id="obj-insp-label" class="shape-box-input" maxlength="28" placeholder="z. B. Merke, Definition...">
+                        </div>
+                        <div class="shape-box-presets" style="margin-top:6px;">
+                            <button type="button" class="shape-label-chip" data-insp-preset="Merke">Merke</button>
+                            <button type="button" class="shape-label-chip" data-insp-preset="Definition">Definition</button>
+                            <button type="button" class="shape-label-chip" data-insp-preset="Experiment">Experiment</button>
+                            <button type="button" class="shape-label-chip" data-insp-preset="Wichtig">Wichtig</button>
+                            <button type="button" class="shape-label-chip" data-insp-preset="Beispiel">Beispiel</button>
+                            <button type="button" class="shape-label-chip" data-insp-preset="">Ohne</button>
+                        </div>
+                        <div class="shape-box-row shape-box-radius-row" style="margin-top:8px;">
+                            <label for="obj-insp-radius">Ecken-Radius</label>
+                            <span id="obj-insp-radius-val" class="shape-box-val">14 px</span>
+                        </div>
+                        <input type="range" id="obj-insp-radius" class="lab-range" min="0" max="32" step="2" value="14">
+                        <div class="shape-box-row shape-box-radius-row" style="margin-top:8px;">
+                            <label for="obj-insp-labelsize">Label-Größe</label>
+                            <span id="obj-insp-labelsize-val" class="shape-box-val">20 px</span>
+                        </div>
+                        <input type="range" id="obj-insp-labelsize" class="lab-range" min="14" max="36" step="2" value="20">
+                    </div>
+
+                    <!-- Bereich: Textfeld-Bearbeitung (nur für Texte) -->
+                    <div id="obj-insp-text-section" class="lab-insp-section hidden">
+                        <div class="shape-box-row">
+                            <label for="obj-insp-text">Text</label>
+                            <textarea id="obj-insp-text" class="obj-insp-textarea" rows="3" placeholder="Text eingeben..."></textarea>
+                        </div>
+                        <div class="shape-box-row" style="margin-top:8px;">
+                            <label for="obj-insp-fontsize">Schriftgröße</label>
+                            <select id="obj-insp-fontsize" class="obj-insp-select">
+                                <option value="18">Klein (18px)</option>
+                                <option value="24">Normal (24px)</option>
+                                <option value="32">Groß (32px)</option>
+                                <option value="44">Überschrift (44px)</option>
+                            </select>
+                        </div>
+                        <div class="obj-insp-checks">
+                            <label class="text-tool-check"><input type="checkbox" id="obj-insp-hasbox"> Rahmen</label>
+                            <label class="text-tool-check"><input type="checkbox" id="obj-insp-hasbubble"> Sprechblase</label>
+                        </div>
+                    </div>
+
+                    <!-- Bereich: Farbe (für Formen & Texte) -->
+                    <div id="obj-insp-color-section" class="lab-insp-section">
+                        <div class="lab-insp-row-head">
+                            <span>Linien- / Textfarbe</span>
+                            <label class="lab-color-custom-wrap" title="Eigene Farbe wählen">
+                                <span>Eigene</span>
+                                <input type="color" id="obj-insp-color-custom" value="#2b579a">
+                            </label>
+                        </div>
+                        <div class="obj-insp-swatches">
+                            <button type="button" class="obj-color-dot" data-obj-color="#111827" style="background:#111827;" title="Schwarz"></button>
+                            <button type="button" class="obj-color-dot" data-obj-color="#0066ff" style="background:#0066ff;" title="Schulblau"></button>
+                            <button type="button" class="obj-color-dot" data-obj-color="#68b82e" style="background:#68b82e;" title="Tafelgrün"></button>
+                            <button type="button" class="obj-color-dot" data-obj-color="#ff0000" style="background:#ff0000;" title="Korrekturrot"></button>
+                            <button type="button" class="obj-color-dot" data-obj-color="#0ea5e9" style="background:#0ea5e9;" title="Hellblau"></button>
+                            <button type="button" class="obj-color-dot" data-obj-color="#9333ea" style="background:#9333ea;" title="Violett"></button>
+                            <button type="button" class="obj-color-dot" data-obj-color="#f59e0b" style="background:#f59e0b;" title="Orange"></button>
+                        </div>
+                    </div>
+
+                    <!-- Bereich: Füllfarbe & Deckkraft (für Rechteck, Kreis, Sprechblase, Merkkasten) -->
+                    <div id="obj-insp-fill-section" class="lab-insp-section hidden">
+                        <div class="lab-insp-row-head">
+                            <span>Füllfarbe</span>
+                            <label class="lab-color-custom-wrap" title="Eigene Füllfarbe wählen">
+                                <span>Eigene</span>
+                                <input type="color" id="obj-insp-fill-custom" value="#0066ff">
+                            </label>
+                        </div>
+                        <div class="obj-insp-swatches">
+                            <button type="button" class="obj-color-dot obj-color-none" data-obj-fill="none" title="Keine Füllung"></button>
+                            <button type="button" class="obj-color-dot" data-obj-fill="#ffffff" style="background:#ffffff;" title="Weiß"></button>
+                            <button type="button" class="obj-color-dot" data-obj-fill="#fef08a" style="background:#fef08a;" title="Gelb"></button>
+                            <button type="button" class="obj-color-dot" data-obj-fill="#0066ff" style="background:#0066ff;" title="Blau"></button>
+                            <button type="button" class="obj-color-dot" data-obj-fill="#68b82e" style="background:#68b82e;" title="Grün"></button>
+                            <button type="button" class="obj-color-dot" data-obj-fill="#ff0000" style="background:#ff0000;" title="Rot"></button>
+                            <button type="button" class="obj-color-dot" data-obj-fill="#9333ea" style="background:#9333ea;" title="Violett"></button>
+                        </div>
+                        <div class="shape-box-row shape-box-radius-row" style="margin-top:8px;">
+                            <label for="obj-insp-fill-opacity">Füll-Deckkraft</label>
+                            <span id="obj-insp-fill-opacity-val" class="shape-box-val">20 %</span>
+                        </div>
+                        <input type="range" id="obj-insp-fill-opacity" class="lab-range" min="5" max="100" step="5" value="20">
+                    </div>
+
+                    <!-- Aktionen: Ebene, Duplizieren, Löschen -->
+                    <div class="lab-insp-section obj-insp-actions-grid">
+                        <button type="button" id="btn-obj-front" class="obj-act-btn" title="In den Vordergrund">Nach vorn</button>
+                        <button type="button" id="btn-obj-back" class="obj-act-btn" title="In den Hintergrund">Nach hinten</button>
+                        <button type="button" id="btn-obj-duplicate" class="obj-act-btn" title="Objekt duplizieren">Duplizieren</button>
+                        <button type="button" id="btn-obj-delete" class="obj-act-btn obj-act-danger" title="Objekt löschen (Entf)">Löschen</button>
+                    </div>
+                </aside>
 
                 <!-- Schwebender Labor-Katalog (Chemix-Stil Geräte-Auswahl) -->
                 <aside id="lab-catalog-drawer" class="lab-floating-panel lab-catalog-drawer palm-shield-zone hidden">
@@ -930,8 +1169,8 @@
         }
     </script>
     <script src="libs/jspdf.umd.min.js"></script>
-    <script src="app.js?v=20261120_2"></script>
+    <script src="app.js?v=20261123_6"></script>
     <script src="lab.js?v=20261119_7"></script>
-    <script src="widgets.js?v=20261119_6"></script>
+    <script src="widgets.js?v=20261123_1"></script>
 </body>
 </html>
