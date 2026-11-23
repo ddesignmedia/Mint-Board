@@ -5487,14 +5487,14 @@
                     hint.textContent = 'Demo-Modus (Lokal): Sichert alle deine Test-Hefte & Ordner als .json-Datei. Du kannst sie jederzeit wieder einspielen – oder später sogar direkt auf deinen eigenen PHP-Server importieren.';
                 }
                 if (btnBackupExport) btnBackupExport.textContent = '⬇ Alle Hefte sichern (.json)';
-                if (hiddenBackupInput) hiddenBackupInput.setAttribute('accept', '.json,application/json');
+                if (hiddenBackupInput) hiddenBackupInput.removeAttribute('accept');
                 if (serverCheck) serverCheck.classList.add('hidden');
             } else {
                 if (hint) {
                     hint.textContent = 'Sichert alle Ordner, Hefte, Seiten sowie eingebettete Bilder & PDFs als .zip-Archiv. Wiederherstellung unterstützt komplette .zip-Backups und Demo-.json-Dateien.';
                 }
                 if (btnBackupExport) btnBackupExport.textContent = '⬇ Alle Hefte sichern (.zip)';
-                if (hiddenBackupInput) hiddenBackupInput.setAttribute('accept', '.zip,.json,application/zip,application/json');
+                if (hiddenBackupInput) hiddenBackupInput.removeAttribute('accept');
                 if (serverCheck) serverCheck.classList.remove('hidden');
             }
         }
