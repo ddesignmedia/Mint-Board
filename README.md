@@ -3,7 +3,7 @@
 > Digitales Tafel- & Notizheft für den MINT-Unterricht – optimiert für Wacom-Stiftdisplays (Windows) und iPad (Apple Pencil), mit integriertem Labor-Baukasten, Unterrichts-Widgets, PDF-Pipeline und Multi-Device-Sync.
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Version-v0.0.1-informational?style=flat-square" alt="Version v0.0.1">
+  <img src="https://img.shields.io/badge/Version-v0.0.2-informational?style=flat-square" alt="Version v0.0.2">
   <img src="https://img.shields.io/badge/Frontend-Vanilla_HTML5_%2F_CSS3_%2F_JS-F7DF1E?style=flat-square" alt="Vanilla Frontend">
   <img src="https://img.shields.io/badge/Backend-PHP_8.x_(JSON_Flat--File)-777BB4?style=flat-square&logo=php&logoColor=white" alt="PHP 8.x">
   <img src="https://img.shields.io/badge/Dependencies-Zero_External_CDNs-blue?style=flat-square" alt="Zero External CDNs">
@@ -40,7 +40,7 @@ Auf **GitHub Pages** startet Mint-Board automatisch im **lokalen Demo-Modus** (B
 * **🧪 Integrierter MINT-Labor-Baukasten (`lab.js`)**
   * Vektorgrafik-Laborgeräte (Becherglas, Erlenmeyerkolben, Reagenzglas, Stativ, Bunsenbrenner u. v. m.) mit Füllständen, Farbstoff-Presets, Schwerkraft-Flüssigkeit beim Kippen, Ausguss-Effekt, Dampf/Gasblasen und Beschriftungen.
 * **⏱️ Schwebende Unterrichts-Widgets (`widgets.js`)**
-  * Bleiben fest im Sichtbereich und werden beim PDF-Export automatisch ausgeblendet (inkl. Countdown-Timer mit sanftem Web-Audio-Gong).
+  * Bleiben fest im Sichtbereich und werden beim PDF-Export automatisch ausgeblendet (inkl. Countdown-Timer mit sanftem Web-Audio-Gong und integriertem Taschenrechner).
 * **📄 Medien- & PDF-Pipeline**
   * Bilder einfügen per Datei-Dialog, Drag & Drop oder Zwischenablage (`Strg + V` / Snipping Tool).
   * **PDF-Import** (lokal via `pdf.js`) und **300-DPI PDF-Export** (lokal via `jsPDF`).
@@ -63,6 +63,11 @@ Auf **GitHub Pages** startet Mint-Board automatisch im **lokalen Demo-Modus** (B
 ---
 
 ## 📋 Changelog
+
+### `v0.0.2`
+* **Formen-Auswahlwerkzeug:** Erweitertes Auswahlmenü für geometrische Formen inkl. neuer Form **Merkkasten**
+* **Neues Unterrichts-Widget:** Integrierter schwebender **Taschenrechner** (`widgets.js`)
+* **Papier-Kontrast:** Angepasster Kontrast für Papiervorlagen (liniert, kariert usw.) für bessere Lesbarkeit auf Beamer & Tablet
 
 ### `v0.0.1`
 * Initiales Release von **Mint-Board**
