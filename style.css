@@ -977,6 +977,80 @@ body.pen-palm-shield-active .palm-shield-zone {
     background: rgba(255, 255, 255, 0.28);
 }
 
+.zoom-icon-btn {
+    width: 28px;
+    height: 26px;
+    border-radius: 999px;
+    border: none;
+    background: rgba(255, 255, 255, 0.14);
+    color: #ffffff;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.12s;
+    margin-left: 2px;
+}
+
+.zoom-icon-btn:hover {
+    background: rgba(255, 255, 255, 0.28);
+}
+
+.zoom-lock-btn {
+    width: 28px;
+    height: 26px;
+    border-radius: 999px;
+    border: none;
+    background: rgba(255, 255, 255, 0.14);
+    color: #ffffff;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.12s, color 0.12s;
+}
+
+.zoom-lock-btn:hover {
+    background: rgba(255, 255, 255, 0.28);
+}
+
+.zoom-lock-btn .icon-locked {
+    display: none;
+}
+
+.zoom-lock-btn.is-locked {
+    background: #f59e0b;
+    color: #0f172a;
+}
+
+.zoom-lock-btn.is-locked:hover {
+    background: #fbbf24;
+}
+
+.zoom-lock-btn.is-locked .icon-unlocked {
+    display: none;
+}
+
+.zoom-lock-btn.is-locked .icon-locked {
+    display: block;
+}
+
+.zoom-controls.zoom-is-locked .zoom-btn,
+.zoom-controls.zoom-is-locked .zoom-fit-btn {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.zoom-controls.zoom-is-locked .zoom-readout {
+    opacity: 0.85;
+    cursor: not-allowed;
+}
+
+.zoom-controls.zoom-is-locked .zoom-btn:hover,
+.zoom-controls.zoom-is-locked .zoom-fit-btn:hover {
+    background: transparent;
+}
+
 /* Popover für Strichstärken-Feinjustierung */
 .floating-popover {
     position: absolute;
@@ -1356,14 +1430,9 @@ body.pen-palm-shield-active .palm-shield-zone {
 .ruler-ticks {
     position: absolute;
     top: 0;
-    left: 12px;
-    right: 12px;
-    height: 18px;
-    background-image:
-        repeating-linear-gradient(90deg, #0369a1 0, #0369a1 1.5px, transparent 1.5px, transparent 37.8px),
-        repeating-linear-gradient(90deg, #0284c7 0, #0284c7 1px, transparent 1px, transparent 7.56px);
-    background-size: 37.8px 16px, 7.56px 9px;
-    background-repeat: repeat-x;
+    left: 0;
+    right: 0;
+    height: 32px;
     pointer-events: none;
 }
 
@@ -1407,6 +1476,264 @@ body.pen-palm-shield-active .palm-shield-zone {
     align-items: center;
     justify-content: center;
     cursor: ew-resize;
+}
+
+/* Interaktives Geodreieck (Drehung exakt um den Nullpunkt 426px 426px) */
+.interactive-geodreieck {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 852px;
+    height: 426px;
+    transform-origin: 426px 426px;
+    z-index: 11;
+    pointer-events: none;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    filter: drop-shadow(0 8px 18px rgba(15, 23, 42, 0.22));
+}
+
+.geodreieck-svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    overflow: visible;
+}
+
+.geodreieck-svg .geo-hit-area {
+    pointer-events: auto;
+    cursor: grab;
+}
+
+.interactive-geodreieck.is-dragging .geo-hit-area {
+    cursor: grabbing;
+}
+
+.geodreieck-hud {
+    position: absolute;
+    left: 50%;
+    top: 63%;
+    transform: translate(-50%, -50%);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(2, 132, 199, 0.45);
+    padding: 3px 8px;
+    border-radius: 999px;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.14);
+    pointer-events: auto;
+}
+
+.geodreieck-angle-badge {
+    font-weight: 800;
+    font-size: 0.84rem;
+    color: #0369a1;
+    min-width: 34px;
+    text-align: center;
+}
+
+.geo-close-btn {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(15, 23, 42, 0.08);
+    color: #334155;
+    font-size: 0.78rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+
+.geo-close-btn:hover {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+.geodreieck-rotate-handle {
+    position: absolute;
+    left: 50%;
+    top: 46px;
+    transform: translate(-50%, -50%);
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: #0284c7;
+    color: #ffffff;
+    font-size: 1.1rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: grab;
+    box-shadow: 0 3px 10px rgba(2, 132, 199, 0.35);
+    border: 2px solid #ffffff;
+    pointer-events: auto;
+}
+
+.geodreieck-rotate-handle:active {
+    cursor: grabbing;
+    transform: translate(-50%, -50%) scale(1.08);
+}
+
+/* Interaktiver Zirkel */
+.interactive-compass {
+    position: absolute;
+    inset: 0;
+    z-index: 12;
+    pointer-events: none;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.compass-svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    overflow: visible;
+}
+
+.compass-handle {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    pointer-events: auto;
+    touch-action: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: transform 0.08s;
+}
+
+.compass-center-handle {
+    width: 40px;
+    height: 40px;
+    background: rgba(239, 68, 68, 0.1);
+    border: 2px solid #dc2626;
+    cursor: move;
+    box-shadow: 0 2px 8px rgba(220, 38, 38, 0.25);
+}
+
+.compass-center-handle::before,
+.compass-center-handle::after {
+    content: "";
+    position: absolute;
+    background: rgba(220, 38, 38, 0.55);
+    pointer-events: none;
+}
+
+.compass-center-handle::before {
+    width: 14px;
+    height: 1.5px;
+}
+
+.compass-center-handle::after {
+    width: 1.5px;
+    height: 14px;
+}
+
+.compass-pin-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #dc2626;
+    box-shadow: 0 0 0 2px #ffffff;
+}
+
+.compass-radius-handle {
+    width: 32px;
+    height: 32px;
+    background: #0284c7;
+    color: #ffffff;
+    border: 2px solid #ffffff;
+    font-size: 0.92rem;
+    font-weight: 800;
+    cursor: ew-resize;
+    box-shadow: 0 3px 10px rgba(2, 132, 199, 0.35);
+}
+
+.compass-draw-handle {
+    width: 40px;
+    height: 40px;
+    background: #16a34a;
+    color: #ffffff;
+    border: 2.5px solid #ffffff;
+    font-size: 1.15rem;
+    font-weight: 700;
+    cursor: grab;
+    box-shadow: 0 4px 14px rgba(22, 163, 74, 0.42);
+}
+
+.compass-draw-handle:active {
+    cursor: grabbing;
+    transform: translate(-50%, -50%) scale(1.1);
+}
+
+.compass-hud {
+    position: absolute;
+    transform: translate(-50%, -100%);
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: rgba(30, 41, 59, 0.92);
+    backdrop-filter: blur(6px);
+    color: #ffffff;
+    padding: 5px 8px;
+    border-radius: 999px;
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.28);
+    pointer-events: auto;
+    white-space: nowrap;
+}
+
+.compass-radius-badge {
+    font-size: 0.78rem;
+    font-weight: 700;
+    padding: 0 4px;
+    min-width: 68px;
+    text-align: center;
+    color: #f8fafc;
+}
+
+.compass-hud-btn {
+    height: 26px;
+    min-width: 26px;
+    padding: 0 7px;
+    border-radius: 999px;
+    border: none;
+    background: rgba(255, 255, 255, 0.16);
+    color: #ffffff;
+    font-size: 0.78rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.compass-hud-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.compass-hud-primary {
+    background: #0284c7;
+    padding: 0 10px;
+}
+
+.compass-hud-primary:hover {
+    background: #0369a1;
+}
+
+.compass-hud-close:hover {
+    background: #dc2626;
 }
 
 /* Lasso Floating Bar */
@@ -1570,7 +1897,32 @@ body.pen-palm-shield-active .palm-shield-zone {
     border-top: 1px solid var(--gn-border);
     display: flex;
     justify-content: flex-end;
+    flex-wrap: wrap;
     gap: 10px;
+}
+
+.modal-actions.conflict-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.modal-actions.conflict-actions .btn {
+    width: 100%;
+    font-size: 0.86rem;
+    padding: 10px 14px;
+}
+
+.modal-actions.conflict-actions #btn-conflict-merge {
+    grid-column: 1 / -1;
+    order: -1;
+    font-size: 0.9rem;
+}
+
+@media (max-width: 440px) {
+    .modal-actions.conflict-actions {
+        grid-template-columns: 1fr;
+    }
 }
 
 .login-card {
@@ -1837,12 +2189,14 @@ body.pen-palm-shield-active .palm-shield-zone {
 
 /* Buttons */
 .btn {
-    height: 38px;
-    padding: 0 16px;
+    min-height: 38px;
+    padding: 8px 16px;
     border-radius: 9px;
     border: none;
-    font-size: 0.9rem;
+    font-size: 0.88rem;
     font-weight: 700;
+    line-height: 1.25;
+    text-align: center;
     cursor: pointer;
     display: inline-flex;
     align-items: center;

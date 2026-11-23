@@ -3,7 +3,7 @@
 > Digitales Tafel- & Notizheft für den MINT-Unterricht – optimiert für Wacom-Stiftdisplays (Windows) und iPad (Apple Pencil), mit integriertem Labor-Baukasten, Unterrichts-Widgets, PDF-Pipeline und Multi-Device-Sync.
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Version-v0.0.2-informational?style=flat-square" alt="Version v0.0.2">
+  <img src="https://img.shields.io/badge/Version-v0.0.3-informational?style=flat-square" alt="Version v0.0.3">
   <img src="https://img.shields.io/badge/Frontend-Vanilla_HTML5_%2F_CSS3_%2F_JS-F7DF1E?style=flat-square" alt="Vanilla Frontend">
   <img src="https://img.shields.io/badge/Backend-PHP_8.x_(JSON_Flat--File)-777BB4?style=flat-square&logo=php&logoColor=white" alt="PHP 8.x">
   <img src="https://img.shields.io/badge/Dependencies-Zero_External_CDNs-blue?style=flat-square" alt="Zero External CDNs">
@@ -34,7 +34,8 @@ Auf **GitHub Pages** startet Mint-Board automatisch im **lokalen Demo-Modus** (B
 
 * **🖊️ Ultra-Low-Latency Handschrift & Werkzeuge**
   * Füller, Fineliner, drucksensitiver Stift, Textmarker (mit Offscreen-Puffer ohne Überlagerungs-Artefakte), Radiergummi, Lasso-Auswahl, Formen & Textboxen.
-  * Optimiert für Wacom Cintiq / Stiftdisplays unter Windows sowie iPad mit Apple Pencil.
+  * **Geometrie-Werkzeuge im exakten DIN-A4-Maßstab** (`1 cm = 2 Karos`): Interaktives Lineal, Geodreieck (mit Winkelmesser & Kanten-Einrasten an allen 3 Kanten) und Zirkel (Kreisbögen & Vollkreise).
+  * Optimiert für Wacom Cintiq / Stiftdisplays unter Windows sowie iPad mit Apple Pencil (inkl. Zoom-Sperre gegen versehentliches Pinch-Zoomen beim Touch-Scrollen).
 * **📚 Schulheft- & Ordner-Verwaltung**
   * Beliebige Ordner und Hefte mit anpassbaren Buchcovern, Farben und Papiervorlagen (5 mm Karo, liniert, punktiert, blanko).
 * **🧪 Integrierter MINT-Labor-Baukasten (`lab.js`)**
@@ -63,6 +64,13 @@ Auf **GitHub Pages** startet Mint-Board automatisch im **lokalen Demo-Modus** (B
 ---
 
 ## 📋 Changelog
+
+### `v0.0.3`
+* **Interaktives Geodreieck:** Klassisches Schul-Geodreieck mit farbigem Winkelmesser (Doppelskala), Parallellinien, Drehung exakt um den Nullpunkt und Stift-Einrasten an allen drei Kanten
+* **Interaktiver Zirkel:** Frei positionierbare Nadelspitze, stufenlose Radiuseinstellung in cm (inkl. `0,5 cm`-Tasten), direktes Zeichnen präziser Kreisbögen mit Live-Winkelanzeige sowie Vollkreis-Button (`○ Kreis`)
+* **Exakte DIN-A4-Maßstab-Synchronisation:** Karo- & Punktraster (`0,5 cm`), Lineal, Geodreieck und Zirkel nutzen exakt denselben Maßstab (`1 cm = 2 Karos bzw. 2 Punktabstände`) – auch beim 300-DPI PDF-Export
+* **Zoom-Sperre & Zentrier-Buttons:** Schloss-Symbol in der Zoomleiste sperrt den Zoomfaktor beim 2-Finger-Touch-Scrollen (Panning bleibt aktiv); neue Buttons für horizontales und vertikales Zentrieren der Seite
+* **UI-Fix (409 Sync-Konflikt-Dialog):** Flexiblere Button-Höhen und sauber gegliedertes Button-Layout ohne Textüberlauf
 
 ### `v0.0.2`
 * **Formen-Auswahlwerkzeug:** Erweitertes Auswahlmenü für geometrische Formen inkl. neuer Form **Merkkasten**

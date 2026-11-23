@@ -16,7 +16,9 @@
     // 1. KONSTANTEN & GLOBALER APP-STATE
     // =========================================================================
     const PAGE_WIDTH = 1120;
-    const PAGE_HEIGHT = 1584; // Exaktes DIN-A4 Seitenverhältnis (1 : 1.414285)
+    const PAGE_HEIGHT = 1584; // Exaktes DIN-A4 Seitenverhältnis (21,0 cm × 29,7 cm)
+    const PX_PER_CM = PAGE_WIDTH / 21; // Exakt 53,3333... px = 1,0 cm auf DIN A4 (2 Karos)
+    const GRID_STEP_5MM = PX_PER_CM / 2; // Exakt 26,6666... px = 0,5 cm (1 Karo / Punktabstand)
     const HOLD_TO_SNAP_MS = 450;
     const HOLD_RADIUS_PX = 5.0;
     const PALM_SHIELD_COOLDOWN_MS = 500;
@@ -62,6 +64,7 @@
         viewZoom: 0.75,
         viewPanX: 0,
         viewPanY: 0,
+        isZoomLocked: false,
 
         // Wacom Cintiq 22 & iPad Pointer-Tracking & Palm Rejection
         activePenPointerId: null,
@@ -121,6 +124,36 @@
             startAngle: 0
         },
 
+        // Interaktives Geodreieck (x, y = exakte Seitenkoordinaten des Nullpunkts auf der Hypotenuse)
+        geodreieck: {
+            visible: false,
+            x: 560,
+            y: 660,
+            angleDeg: 0,
+            dragging: false,
+            rotating: false,
+            dragStartX: 0,
+            dragStartY: 0,
+            startX: 0,
+            startY: 0
+        },
+
+        // Interaktiver Zirkel (cx, cy = Nadel-Mittelpunkt, radius in px, 1 cm = PX_PER_CM = 2 Karos)
+        compass: {
+            visible: false,
+            cx: 560,
+            cy: 560,
+            radius: PX_PER_CM * 3.0, // Exakt 3,0 cm = 6 Karos
+            angleRad: 0,
+            mode: null, // null | 'move' | 'radius' | 'draw'
+            pointerId: null,
+            dragOffsetX: 0,
+            dragOffsetY: 0,
+            drawStroke: null,
+            lastDrawAngle: 0,
+            totalSweepRad: 0
+        },
+
         //Inline-Text-Editor
         editingTextObj: null,
 
@@ -175,6 +208,16 @@
 
         DOM.rulerEl = document.getElementById('interactive-ruler');
         DOM.rulerAngleBadge = document.getElementById('ruler-angle-badge');
+        DOM.geoEl = document.getElementById('interactive-geodreieck');
+        DOM.geoSvg = document.getElementById('geodreieck-svg');
+        DOM.geoAngleBadge = document.getElementById('geodreieck-angle-badge');
+        DOM.compassEl = document.getElementById('interactive-compass');
+        DOM.compassSvg = document.getElementById('compass-svg');
+        DOM.compassCenterHandle = document.getElementById('compass-center-handle');
+        DOM.compassRadiusHandle = document.getElementById('compass-radius-handle');
+        DOM.compassDrawHandle = document.getElementById('compass-draw-handle');
+        DOM.compassHud = document.getElementById('compass-hud');
+        DOM.compassRadiusBadge = document.getElementById('compass-radius-badge');
         DOM.lassoBar = document.getElementById('lasso-floating-bar');
         DOM.imageBar = document.getElementById('image-floating-bar');
         DOM.canvasToast = document.getElementById('canvas-toast');
@@ -888,7 +931,7 @@
         clearObjectSelection();
         commitInlineTextIfActive();
 
-        fitPageToViewport();
+        fitPageToViewport(true);
         await selectPage(AppState.currentPageIndex);
         renderSidebarThumbnails();
     }
@@ -1051,15 +1094,17 @@
             const marginColor = '#e88b84';
 
             if (tpl === 'grid_5mm') {
-                const gridStep = 26.6; // ~5mm auf A4 (210mm -> 42 Kästchen horizontal)
+                // Exakt 5 mm auf DIN A4 (210 mm -> 42 Kästchen horizontal, 1 cm = 2 Karos)
                 ctx.strokeStyle = lineColor;
                 ctx.lineWidth = 1;
                 ctx.beginPath();
-                for (let x = gridStep; x < PAGE_WIDTH; x += gridStep) {
+                for (let i = 1; i * GRID_STEP_5MM < PAGE_WIDTH - 0.5; i++) {
+                    const x = i * GRID_STEP_5MM;
                     ctx.moveTo(x, 0);
                     ctx.lineTo(x, PAGE_HEIGHT);
                 }
-                for (let y = gridStep; y < PAGE_HEIGHT; y += gridStep) {
+                for (let j = 1; j * GRID_STEP_5MM < PAGE_HEIGHT - 0.5; j++) {
+                    const y = j * GRID_STEP_5MM;
                     ctx.moveTo(0, y);
                     ctx.lineTo(PAGE_WIDTH, y);
                 }
@@ -1084,10 +1129,12 @@
                 ctx.lineTo(118, PAGE_HEIGHT);
                 ctx.stroke();
             } else if (tpl === 'dotted') {
-                const dotStep = 26.6;
+                // Exakt 5 mm Punktraster auf DIN A4 (1 cm = 2 Punkte Abstand)
                 ctx.fillStyle = '#b6b0a0';
-                for (let x = dotStep; x < PAGE_WIDTH; x += dotStep) {
-                    for (let y = dotStep; y < PAGE_HEIGHT; y += dotStep) {
+                for (let i = 1; i * GRID_STEP_5MM < PAGE_WIDTH - 0.5; i++) {
+                    const x = i * GRID_STEP_5MM;
+                    for (let j = 1; j * GRID_STEP_5MM < PAGE_HEIGHT - 0.5; j++) {
+                        const y = j * GRID_STEP_5MM;
                         ctx.beginPath();
                         ctx.arc(x, y, 1.35, 0, Math.PI * 2);
                         ctx.fill();
@@ -1653,22 +1700,99 @@
     /**
      * Sub-Pixel Koordinatenberechnung auf der A4-Seite (OHNE Math.round() und OHNE Layout-Thrashing!)
      */
-    function clientToPageCoords(clientX, clientY) {
+    function clientToPageCoordsRaw(clientX, clientY) {
         const rect = cachedCanvasRect || DOM.uiCanvas.getBoundingClientRect();
         const scaleX = PAGE_WIDTH / rect.width;
         const scaleY = PAGE_HEIGHT / rect.height;
-        let x = (clientX - rect.left) * scaleX;
-        let y = (clientY - rect.top) * scaleY;
+        return {
+            x: (clientX - rect.left) * scaleX,
+            y: (clientY - rect.top) * scaleY
+        };
+    }
 
-        // Falls das interaktive Lineal eingeblendet ist und der Stift nahe an der Linealkante zeichnet:
-        if (AppState.ruler.visible && AppState.activeTool === 'pen' && !AppState.tempHardwareEraser) {
-            const snapped = snapPointToRulerIfClose(x, y);
+    function clientToPageCoords(clientX, clientY) {
+        const raw = clientToPageCoordsRaw(clientX, clientY);
+        let x = raw.x;
+        let y = raw.y;
+
+        // Falls das interaktive Lineal oder Geodreieck eingeblendet ist und der Stift nahe an einer Kante zeichnet:
+        if (AppState.activeTool === 'pen' && !AppState.tempHardwareEraser) {
+            let snapped = null;
+            if (AppState.geodreieck.visible) {
+                snapped = snapPointToGeodreieckIfClose(x, y);
+            }
+            if (!snapped && AppState.ruler.visible) {
+                snapped = snapPointToRulerIfClose(x, y);
+            }
             if (snapped) {
                 x = snapped.x;
                 y = snapped.y;
             }
         }
         return { x, y };
+    }
+
+    function snapPointToGeodreieckIfClose(px, py) {
+        const g = AppState.geodreieck;
+        const HALF_W = 426;
+        const rad = (g.angleDeg * Math.PI) / 180;
+        const cos = Math.cos(-rad);
+        const sin = Math.sin(-rad);
+
+        // Punkt ins lokale Koordinatensystem des Geodreiecks (Ursprung = Nullpunkt auf der Hypotenuse)
+        const dx = px - g.x;
+        const dy = py - g.y;
+        const lx = dx * cos - dy * sin;
+        const ly = dx * sin + dy * cos;
+
+        const snapThreshold = 24;
+        let bestDist = snapThreshold;
+        let bestLocal = null;
+
+        // 1. Untere Kante (Hypotenuse / Linealkante): ly = 0, lx in [-426, +426]
+        if (Math.abs(lx) <= HALF_W + 10) {
+            const distBottom = Math.abs(ly);
+            if (distBottom < bestDist) {
+                bestDist = distBottom;
+                bestLocal = { x: Math.max(-HALF_W, Math.min(HALF_W, lx)), y: 1.5 };
+            }
+        }
+
+        // 2. Linker 45°-Schenkel: von (-426, 0) nach (0, -426) -> lx + ly + 426 = 0
+        if (lx >= -HALF_W - 12 && lx <= 12 && ly >= -HALF_W - 12 && ly <= 12) {
+            const dLeft = -(lx + ly + HALF_W) * Math.SQRT1_2; // positiv außerhalb
+            if (Math.abs(dLeft) < bestDist) {
+                const offset = 1.5 - dLeft;
+                const sx = lx - offset * Math.SQRT1_2;
+                const sy = ly - offset * Math.SQRT1_2;
+                if (sx >= -HALF_W - 6 && sx <= 6 && sy >= -HALF_W - 6 && sy <= 6) {
+                    bestDist = Math.abs(dLeft);
+                    bestLocal = { x: sx, y: sy };
+                }
+            }
+        }
+
+        // 3. Rechter 45°-Schenkel: von (0, -426) nach (+426, 0) -> lx - ly - 426 = 0
+        if (lx >= -12 && lx <= HALF_W + 12 && ly >= -HALF_W - 12 && ly <= 12) {
+            const dRight = (lx - ly - HALF_W) * Math.SQRT1_2; // positiv außerhalb
+            if (Math.abs(dRight) < bestDist) {
+                const offset = 1.5 - dRight;
+                const sx = lx + offset * Math.SQRT1_2;
+                const sy = ly - offset * Math.SQRT1_2;
+                if (sx >= -6 && sx <= HALF_W + 6 && sy >= -HALF_W - 6 && sy <= 6) {
+                    bestDist = Math.abs(dRight);
+                    bestLocal = { x: sx, y: sy };
+                }
+            }
+        }
+
+        if (!bestLocal) return null;
+        const cosBack = Math.cos(rad);
+        const sinBack = Math.sin(rad);
+        return {
+            x: g.x + bestLocal.x * cosBack - bestLocal.y * sinBack,
+            y: g.y + bestLocal.x * sinBack + bestLocal.y * cosBack
+        };
     }
 
     function snapPointToRulerIfClose(px, py) {
@@ -1742,7 +1866,9 @@
                 if (!ev.target.closest('.inline-text-editor-wrap') &&
                     !ev.target.closest('.lasso-floating-bar') &&
                     !ev.target.closest('.floating-page-badge') &&
-                    !ev.target.closest('.interactive-ruler')) {
+                    !ev.target.closest('.interactive-ruler') &&
+                    !ev.target.closest('.interactive-geodreieck') &&
+                    !ev.target.closest('.interactive-compass')) {
                     ev.preventDefault();
                 }
             }
@@ -1760,8 +1886,10 @@
         viewport.addEventListener('wheel', (e) => {
             e.preventDefault();
             if (e.ctrlKey) {
-                const factor = e.deltaY < 0 ? 1.08 : 0.92;
-                setZoom(AppState.viewZoom * factor);
+                if (!AppState.isZoomLocked) {
+                    const factor = e.deltaY < 0 ? 1.08 : 0.92;
+                    setZoom(AppState.viewZoom * factor);
+                }
             } else {
                 AppState.viewPanX -= e.deltaX;
                 AppState.viewPanY -= e.deltaY;
@@ -1777,6 +1905,8 @@
             e.target.closest('.floating-page-badge') ||
             e.target.closest('.zoom-controls') ||
             e.target.closest('.interactive-ruler') ||
+            e.target.closest('.interactive-geodreieck') ||
+            e.target.closest('.interactive-compass') ||
             e.target.closest('.lab-floating-panel') ||
             e.target.closest('.classroom-widget') ||
             e.target.closest('.widget-menu-popover')) {
@@ -2554,16 +2684,38 @@
         const midX = (pts[0].x + pts[1].x) * 0.5;
         const midY = (pts[0].y + pts[1].y) * 0.5;
 
-        const scaleRatio = dist / AppState.pinchState.startDist;
-        const newZoom = Math.max(0.35, Math.min(3.0, AppState.pinchState.startZoom * scaleRatio));
-
-        AppState.viewZoom = newZoom;
+        if (!AppState.isZoomLocked) {
+            const scaleRatio = dist / AppState.pinchState.startDist;
+            const newZoom = Math.max(0.35, Math.min(3.0, AppState.pinchState.startZoom * scaleRatio));
+            AppState.viewZoom = newZoom;
+        }
         AppState.viewPanX = AppState.pinchState.startPanX + (midX - AppState.pinchState.startMidX);
         AppState.viewPanY = AppState.pinchState.startPanY + (midY - AppState.pinchState.startMidY);
         applyViewportTransform();
     }
 
-    function fitPageToViewport() {
+    function setZoomLocked(locked) {
+        AppState.isZoomLocked = Boolean(locked);
+        const lockBtn = document.getElementById('btn-zoom-lock');
+        const zoomBar = document.getElementById('zoom-controls');
+        if (lockBtn) {
+            lockBtn.classList.toggle('is-locked', AppState.isZoomLocked);
+            lockBtn.setAttribute('aria-pressed', AppState.isZoomLocked ? 'true' : 'false');
+            lockBtn.title = AppState.isZoomLocked
+                ? 'Zoom entsperren (aktueller Zoomfaktor ist gesperrt)'
+                : 'Zoom sperren (verhindert versehentliches Zoomen beim Touch-Scrollen)';
+        }
+        if (zoomBar) {
+            zoomBar.classList.toggle('zoom-is-locked', AppState.isZoomLocked);
+        }
+        ['btn-zoom-out', 'btn-zoom-reset', 'btn-zoom-in', 'btn-zoom-fit-width'].forEach((id) => {
+            const el = document.getElementById(id);
+            if (el) el.disabled = AppState.isZoomLocked;
+        });
+    }
+
+    function fitPageToViewport(force = false) {
+        if (AppState.isZoomLocked && !force) return;
         const vw = DOM.canvasViewport.clientWidth || window.innerWidth - 260;
         const vh = DOM.canvasViewport.clientHeight || window.innerHeight - 110;
         const scaleW = (vw - 48) / PAGE_WIDTH;
@@ -2575,6 +2727,7 @@
     }
 
     function fitPageToWidth() {
+        if (AppState.isZoomLocked) return;
         const vw = DOM.canvasViewport.clientWidth || window.innerWidth - 260;
         const scaleW = (vw - 32) / PAGE_WIDTH;
         AppState.viewZoom = Math.max(0.35, Math.min(3.0, scaleW));
@@ -2583,7 +2736,19 @@
         applyViewportTransform();
     }
 
+    function centerPageHorizontally() {
+        AppState.viewPanX = (PAGE_WIDTH * (1 - AppState.viewZoom)) / 2;
+        applyViewportTransform();
+    }
+
+    function centerPageVertically() {
+        const vh = DOM.canvasViewport.clientHeight || window.innerHeight - 110;
+        AppState.viewPanY = (vh - PAGE_HEIGHT * AppState.viewZoom) / 2 - 24 * AppState.viewZoom;
+        applyViewportTransform();
+    }
+
     function setZoom(newZoom) {
+        if (AppState.isZoomLocked) return;
         AppState.viewZoom = Math.max(0.35, Math.min(3.0, newZoom));
         applyViewportTransform();
     }
@@ -4577,7 +4742,31 @@
         }
     }
 
+    function buildRulerScaleSVG() {
+        const ticksEl = DOM.rulerEl ? DOM.rulerEl.querySelector('.ruler-ticks') : null;
+        if (!ticksEl) return;
+        // .interactive-ruler hat width: 680px + border: 2px (box-sizing: border-box) -> Innenbreite exakt 676px!
+        // SVG-viewBox und CSS-Breite müssen 1:1 identisch sein (676px), damit 1 SVG-Einheit = exakt 1 Seiten-Pixel ist.
+        const innerW = 676;
+        const startX = 18; // 12 cm * 53.3333px = 640px -> 18px Rand links & rechts
+        const mmStep = PX_PER_CM / 10;
+        const parts = [];
+        for (let mm = 0; mm <= 120; mm++) {
+            const x = startX + mm * mmStep;
+            const isCm = mm % 10 === 0;
+            const isHalfCm = mm % 5 === 0;
+            const h = isCm ? 17 : (isHalfCm ? 11 : 6.5);
+            parts.push(`<line x1="${x.toFixed(2)}" y1="0" x2="${x.toFixed(2)}" y2="${h}" stroke="${isCm ? '#0369a1' : '#0284c7'}" stroke-width="${isCm ? 1.5 : (isHalfCm ? 1.1 : 0.85)}"/>`);
+            if (isCm) {
+                const cm = mm / 10;
+                parts.push(`<text x="${x.toFixed(2)}" y="28" text-anchor="middle" font-size="11" font-weight="800" fill="#0369a1">${cm}</text>`);
+            }
+        }
+        ticksEl.innerHTML = `<svg viewBox="0 0 ${innerW} 32" width="${innerW}" height="32" style="display:block;width:${innerW}px;height:32px;overflow:visible;">${parts.join('')}</svg>`;
+    }
+
     function initRulerInteractions() {
+        buildRulerScaleSVG();
         const rulerEl = DOM.rulerEl;
         const rotHandle = document.getElementById('ruler-rotate-handle');
 
@@ -4631,6 +4820,526 @@
     function updateRulerTransform() {
         DOM.rulerEl.style.transform = `translate(${AppState.ruler.x}px, ${AppState.ruler.y}px) rotate(${AppState.ruler.angleDeg}deg)`;
         DOM.rulerAngleBadge.textContent = `${AppState.ruler.angleDeg}°`;
+    }
+
+    // =========================================================================
+    // 14b. INTERAKTIVES GEODREIECK (EXAKTER CM-MASSSTAB, WINKELMESSER, KANTEN-SNAPPING)
+    // =========================================================================
+    function buildGeodreieckSVG() {
+        const svg = DOM.geoSvg;
+        if (!svg) return;
+
+        const W = 852;
+        const H = 426;
+        const CX = 426;
+        const CY = 426;
+
+        const parts = [];
+        parts.push(`
+            <defs>
+                <linearGradient id="geo-glass-grad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="rgba(235, 244, 255, 0.78)"/>
+                    <stop offset="100%" stop-color="rgba(255, 255, 255, 0.70)"/>
+                </linearGradient>
+                <clipPath id="geo-tri-clip">
+                    <polygon points="0,${H} ${CX},0 ${W},${H}"/>
+                </clipPath>
+            </defs>
+        `);
+
+        // 1. Hauptkörper (klick-/ziehbar nur innerhalb des Dreiecks!)
+        parts.push(`<polygon class="geo-hit-area" points="0,${H} ${CX},0 ${W},${H}" fill="url(#geo-glass-grad)" stroke="#334155" stroke-width="2" stroke-linejoin="round"/>`);
+
+        // Alles Innere sauber aufs Dreieck clippen
+        parts.push(`<g clip-path="url(#geo-tri-clip)" pointer-events="none">`);
+
+        // 2. Farbiger Winkelmesser-Bogen (angelehnt an klassisches Schul-Geodreieck)
+        const arcBand = (degStart, degEnd, rIn, rOut, fill) => {
+            const a1 = (degStart * Math.PI) / 180;
+            const a2 = (degEnd * Math.PI) / 180;
+            const x1o = CX + rOut * Math.cos(a1), y1o = CY - rOut * Math.sin(a1);
+            const x2o = CX + rOut * Math.cos(a2), y2o = CY - rOut * Math.sin(a2);
+            const x2i = CX + rIn * Math.cos(a2),  y2i = CY - rIn * Math.sin(a2);
+            const x1i = CX + rIn * Math.cos(a1),  y1i = CY - rIn * Math.sin(a1);
+            return `<path d="M${x1o.toFixed(1)},${y1o.toFixed(1)} A${rOut},${rOut} 0 0,0 ${x2o.toFixed(1)},${y2o.toFixed(1)} L${x2i.toFixed(1)},${y2i.toFixed(1)} A${rIn},${rIn} 0 0,1 ${x1i.toFixed(1)},${y1i.toFixed(1)} Z" fill="${fill}"/>`;
+        };
+        const rBandIn = 212;
+        const rBandOut = 242;
+        parts.push(arcBand(6, 25, rBandIn, rBandOut, 'rgba(250, 232, 100, 0.72)'));
+        parts.push(arcBand(25, 45, rBandIn, rBandOut, 'rgba(154, 230, 150, 0.65)'));
+        parts.push(arcBand(45, 65, rBandIn, rBandOut, 'rgba(135, 218, 240, 0.66)'));
+        parts.push(arcBand(65, 115, rBandIn, rBandOut, 'rgba(244, 148, 152, 0.72)'));
+        parts.push(arcBand(115, 135, rBandIn, rBandOut, 'rgba(135, 218, 240, 0.66)'));
+        parts.push(arcBand(135, 155, rBandIn, rBandOut, 'rgba(154, 230, 150, 0.65)'));
+        parts.push(arcBand(155, 174, rBandIn, rBandOut, 'rgba(250, 232, 100, 0.72)'));
+
+        // Raute bei 90°
+        parts.push(`<polygon points="${CX},${CY - rBandOut - 12} ${CX + 13},${CY - (rBandIn + rBandOut) / 2} ${CX},${CY - rBandIn + 12} ${CX - 13},${CY - (rBandIn + rBandOut) / 2}" fill="rgba(244, 148, 152, 0.85)"/>`);
+
+        // 3. Grad-Striche am inneren Halbkreis (r = 186..198) & an den beiden 45°-Schenkeln
+        const rInnerBase = 186;
+        for (let deg = 5; deg <= 175; deg++) {
+            const rad = (deg * Math.PI) / 180;
+            const cos = Math.cos(rad);
+            const sin = Math.sin(rad);
+            const isTen = deg % 10 === 0;
+            const isFive = deg % 5 === 0;
+
+            // Innerer Halbkreis
+            const lenIn = isTen ? 14 : (isFive ? 10 : 6);
+            const ix1 = CX + rInnerBase * cos;
+            const iy1 = CY - rInnerBase * sin;
+            const ix2 = CX + (rInnerBase + lenIn) * cos;
+            const iy2 = CY - (rInnerBase + lenIn) * sin;
+            parts.push(`<line x1="${ix1.toFixed(1)}" y1="${iy1.toFixed(1)}" x2="${ix2.toFixed(1)}" y2="${iy2.toFixed(1)}" stroke="#1e293b" stroke-width="${isTen ? 1.4 : 0.85}"/>`);
+
+            // Äußere 45°-Schenkel (Strahl vom Nullpunkt bis zur Kante)
+            const tEdge = H / (Math.abs(cos) + sin);
+            const lenOut = isTen ? 18 : (isFive ? 12 : 7);
+            const ox1 = CX + tEdge * cos;
+            const oy1 = CY - tEdge * sin;
+            const ox2 = CX + (tEdge - lenOut) * cos;
+            const oy2 = CY - (tEdge - lenOut) * sin;
+            parts.push(`<line x1="${ox1.toFixed(1)}" y1="${oy1.toFixed(1)}" x2="${ox2.toFixed(1)}" y2="${oy2.toFixed(1)}" stroke="#1e293b" stroke-width="${isTen ? 1.4 : 0.85}"/>`);
+
+            // Lange Winkellinien bei jedem 10°-Schritt im oberen Bereich
+            if (isTen && deg >= 20 && deg <= 160 && deg !== 90) {
+                const lx1 = CX + (rBandOut + 3) * cos;
+                const ly1 = CY - (rBandOut + 3) * sin;
+                const lx2 = CX + (tEdge - 18) * cos;
+                const ly2 = CY - (tEdge - 18) * sin;
+                if (tEdge - 18 > rBandOut + 6) {
+                    parts.push(`<line x1="${lx1.toFixed(1)}" y1="${ly1.toFixed(1)}" x2="${lx2.toFixed(1)}" y2="${ly2.toFixed(1)}" stroke="#475569" stroke-width="0.9" opacity="0.75"/>`);
+                }
+            }
+        }
+
+        // 4. Grad-Zahlen (äußere Skala 10..170 im Farbband, innere Gegenskala 170..10)
+        for (let deg = 10; deg <= 170; deg += 10) {
+            const rad = (deg * Math.PI) / 180;
+            const cos = Math.cos(rad);
+            const sin = Math.sin(rad);
+            const rot = 90 - deg;
+
+            // Äußere Skala (rechts 10..90..170 links)
+            const rTextOut = 227;
+            const tx = CX + rTextOut * cos;
+            const ty = CY - rTextOut * sin;
+            parts.push(`<text x="${tx.toFixed(1)}" y="${ty.toFixed(1)}" text-anchor="middle" dominant-baseline="central" font-size="${deg === 90 ? 18 : 13.5}" font-weight="800" fill="#0f172a" transform="rotate(${rot.toFixed(1)} ${tx.toFixed(1)} ${ty.toFixed(1)})">${deg}</text>`);
+
+            // Innere Gegenskala (170..10, ohne doppelte 90)
+            if (deg !== 90) {
+                const rTextIn = 204;
+                const ix = CX + rTextIn * cos;
+                const iy = CY - rTextIn * sin;
+                parts.push(`<text x="${ix.toFixed(1)}" y="${iy.toFixed(1)}" text-anchor="middle" dominant-baseline="central" font-size="11" font-weight="700" fill="#334155" transform="rotate(${rot.toFixed(1)} ${ix.toFixed(1)} ${iy.toFixed(1)})">${180 - deg}</text>`);
+            }
+        }
+
+        // 5. 90°-Mittellinie & 45°-Hilfslinien
+        parts.push(`<line x1="${CX}" y1="${CY}" x2="${CX}" y2="0" stroke="#0f172a" stroke-width="1.35"/>`);
+        parts.push(`<line x1="${CX}" y1="${CY}" x2="${(CX - 180 * Math.SQRT1_2).toFixed(1)}" y2="${(CY - 180 * Math.SQRT1_2).toFixed(1)}" stroke="#334155" stroke-width="1" stroke-dasharray="6 5"/>`);
+        parts.push(`<line x1="${CX}" y1="${CY}" x2="${(CX + 180 * Math.SQRT1_2).toFixed(1)}" y2="${(CY - 180 * Math.SQRT1_2).toFixed(1)}" stroke="#334155" stroke-width="1" stroke-dasharray="6 5"/>`);
+
+        // 6. Parallellinien alle 0,5 cm bis 3,5 cm + vertikale Abstandsskalen (1..3 cm)
+        for (let halfCm = 1; halfCm <= 7; halfCm++) {
+            const distPx = halfCm * (PX_PER_CM / 2);
+            const yPos = CY - distPx;
+            const maxHalfSpan = Math.sqrt(Math.max(0, 178 * 178 - distPx * distPx)) - 10;
+            if (maxHalfSpan > 20) {
+                const isWholeCm = halfCm % 2 === 0;
+                parts.push(`<line x1="${(CX - maxHalfSpan).toFixed(1)}" y1="${yPos.toFixed(1)}" x2="${(CX + maxHalfSpan).toFixed(1)}" y2="${yPos.toFixed(1)}" stroke="#334155" stroke-width="${isWholeCm ? 1.1 : 0.75}" opacity="${isWholeCm ? 0.82 : 0.55}"/>`);
+                if (isWholeCm) {
+                    const cmVal = halfCm / 2;
+                    const labelOffset = Math.min(118, maxHalfSpan - 6);
+                    parts.push(`<text x="${(CX - labelOffset).toFixed(1)}" y="${(yPos - 4).toFixed(1)}" text-anchor="middle" font-size="11" font-weight="700" fill="#1e293b">${cmVal}</text>`);
+                    parts.push(`<text x="${(CX + labelOffset).toFixed(1)}" y="${(yPos - 4).toFixed(1)}" text-anchor="middle" font-size="11" font-weight="700" fill="#1e293b">${cmVal}</text>`);
+                }
+            }
+        }
+
+        // 7. Untere Zentimeter- & Millimeterskala (-8 cm bis +8 cm, Nullpunkt genau bei CX)
+        const mmStep = PX_PER_CM / 10;
+        for (let mm = -78; mm <= 78; mm++) {
+            const xPos = CX + mm * mmStep;
+            const absMm = Math.abs(mm);
+            const isCm = absMm % 10 === 0;
+            const isHalfCm = absMm % 5 === 0;
+            const tickH = isCm ? 17 : (isHalfCm ? 11 : 6.5);
+            parts.push(`<line x1="${xPos.toFixed(2)}" y1="${CY}" x2="${xPos.toFixed(2)}" y2="${(CY - tickH).toFixed(2)}" stroke="#0f172a" stroke-width="${isCm ? 1.5 : (isHalfCm ? 1.1 : 0.8)}"/>`);
+            if (isCm && absMm <= 70) {
+                const cmLabel = absMm / 10;
+                parts.push(`<text x="${xPos.toFixed(2)}" y="${CY - 22}" text-anchor="middle" font-size="13.5" font-weight="800" fill="#0f172a">${cmLabel}</text>`);
+            }
+        }
+
+        // Roter Nullpunkt-Marker direkt an der Hypotenuse
+        parts.push(`<circle cx="${CX}" cy="${CY}" r="3.5" fill="#dc2626"/>`);
+
+        parts.push(`</g>`);
+        svg.innerHTML = parts.join('');
+    }
+
+    function updateGeodreieckTransform() {
+        if (!DOM.geoEl) return;
+        const g = AppState.geodreieck;
+        DOM.geoEl.style.transform = `translate(${g.x - 426}px, ${g.y - 426}px) rotate(${g.angleDeg}deg)`;
+        if (DOM.geoAngleBadge) {
+            const norm = ((Math.round(g.angleDeg) % 360) + 360) % 360;
+            DOM.geoAngleBadge.textContent = `${norm}°`;
+        }
+    }
+
+    function initGeodreieckInteractions() {
+        buildGeodreieckSVG();
+        const geoEl = DOM.geoEl;
+        if (!geoEl) return;
+        const rotHandle = document.getElementById('geodreieck-rotate-handle');
+        const btnSnap = document.getElementById('btn-geo-snap-angle');
+        const btnClose = document.getElementById('btn-geo-close');
+
+        geoEl.addEventListener('pointerdown', (e) => {
+            if (e.target.closest('#btn-geo-snap-angle') || e.target.closest('#btn-geo-close')) return;
+            e.stopPropagation();
+            e.preventDefault();
+            geoEl.setPointerCapture(e.pointerId);
+            if (e.target === rotHandle || e.target.closest('#geodreieck-rotate-handle')) {
+                AppState.geodreieck.rotating = true;
+            } else {
+                AppState.geodreieck.dragging = true;
+                AppState.geodreieck.dragStartX = e.clientX;
+                AppState.geodreieck.dragStartY = e.clientY;
+                AppState.geodreieck.startX = AppState.geodreieck.x;
+                AppState.geodreieck.startY = AppState.geodreieck.y;
+                geoEl.classList.add('is-dragging');
+            }
+        });
+
+        geoEl.addEventListener('pointermove', (e) => {
+            if (!AppState.geodreieck.dragging && !AppState.geodreieck.rotating) return;
+            e.stopPropagation();
+            e.preventDefault();
+            if (AppState.geodreieck.dragging) {
+                const dx = (e.clientX - AppState.geodreieck.dragStartX) / AppState.viewZoom;
+                const dy = (e.clientY - AppState.geodreieck.dragStartY) / AppState.viewZoom;
+                AppState.geodreieck.x = AppState.geodreieck.startX + dx;
+                AppState.geodreieck.y = AppState.geodreieck.startY + dy;
+            } else if (AppState.geodreieck.rotating) {
+                const pt = clientToPageCoordsRaw(e.clientX, e.clientY);
+                const dx = pt.x - AppState.geodreieck.x;
+                const dy = pt.y - AppState.geodreieck.y;
+                let deg = (Math.atan2(dy, dx) * 180) / Math.PI + 90;
+                deg = ((deg % 360) + 360) % 360;
+                // Sanftes Einrasten bei 45°-Vielfachen (±2°)
+                const nearest45 = Math.round(deg / 45) * 45;
+                if (Math.abs(deg - nearest45) <= 2.0) {
+                    deg = nearest45 % 360;
+                } else {
+                    deg = Math.round(deg);
+                }
+                AppState.geodreieck.angleDeg = deg;
+            }
+            updateGeodreieckTransform();
+        });
+
+        const endGeoDrag = (e) => {
+            AppState.geodreieck.dragging = false;
+            AppState.geodreieck.rotating = false;
+            geoEl.classList.remove('is-dragging');
+            try { geoEl.releasePointerCapture(e.pointerId); } catch (_) {}
+        };
+        geoEl.addEventListener('pointerup', endGeoDrag);
+        geoEl.addEventListener('pointercancel', endGeoDrag);
+
+        if (btnSnap) {
+            btnSnap.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const cur = ((Math.round(AppState.geodreieck.angleDeg) % 360) + 360) % 360;
+                const stops = [0, 45, 90, 135, 180, 270];
+                const next = stops.find(a => a > cur + 1) ?? 0;
+                AppState.geodreieck.angleDeg = next;
+                updateGeodreieckTransform();
+            });
+        }
+
+        if (btnClose) {
+            btnClose.addEventListener('click', (e) => {
+                e.stopPropagation();
+                AppState.geodreieck.visible = false;
+                DOM.geoEl.classList.add('hidden');
+                const toggleBtn = document.getElementById('btn-toggle-geodreieck');
+                if (toggleBtn) toggleBtn.classList.remove('active');
+            });
+        }
+    }
+
+    // =========================================================================
+    // 14c. INTERAKTIVER ZIRKEL (NADEL, RADIUS IN CM, KREISBÖGEN & VOLLKREIS)
+    // =========================================================================
+    const COMPASS_MIN_R = PX_PER_CM * 0.5;  // 0,5 cm
+    const COMPASS_MAX_R = PX_PER_CM * 10.5; // 10,5 cm
+
+    function normalizeAngleDelta(delta) {
+        while (delta > Math.PI) delta -= Math.PI * 2;
+        while (delta < -Math.PI) delta += Math.PI * 2;
+        return delta;
+    }
+
+    function renderCompassVisual() {
+        if (!DOM.compassSvg || !AppState.compass.visible) return;
+        const c = AppState.compass;
+        const px = c.cx + c.radius * Math.cos(c.angleRad);
+        const py = c.cy + c.radius * Math.sin(c.angleRad);
+
+        // Zirkel-Scharnier (Kopf) perspektivisch über der Mitte der beiden Spitzen
+        const mx = (c.cx + px) * 0.5;
+        const my = (c.cy + py) * 0.5;
+        const legLen = Math.max(c.radius * 0.85, 165);
+        const hingeH = Math.max(115, Math.sqrt(Math.max(13225, legLen * legLen - (c.radius * 0.5) * (c.radius * 0.5))));
+        const hx = mx;
+        const hy = my - hingeH;
+
+        const leadColor = AppState.activeColor || '#111827';
+        const rCm = (c.radius / PX_PER_CM).toFixed(1).replace('.', ',');
+
+        const sweepBadge = c.mode === 'draw'
+            ? `<g>
+                <rect x="${(px + 20).toFixed(1)}" y="${(py - 34).toFixed(1)}" width="54" height="24" rx="12" fill="rgba(15,23,42,0.88)"/>
+                <text x="${(px + 47).toFixed(1)}" y="${(py - 22).toFixed(1)}" text-anchor="middle" dominant-baseline="central" font-size="12" font-weight="800" fill="#ffffff">${Math.min(360, Math.round(Math.abs(c.totalSweepRad) * 180 / Math.PI))}°</text>
+               </g>`
+            : '';
+
+        DOM.compassSvg.innerHTML = `
+            <defs>
+                <linearGradient id="compass-metal" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stop-color="#e2e8f0"/>
+                    <stop offset="50%" stop-color="#94a3b8"/>
+                    <stop offset="100%" stop-color="#475569"/>
+                </linearGradient>
+            </defs>
+            <!-- Gestrichelter Vorschau-Kreis -->
+            <circle cx="${c.cx.toFixed(1)}" cy="${c.cy.toFixed(1)}" r="${c.radius.toFixed(1)}" fill="none" stroke="rgba(2, 132, 199, 0.45)" stroke-width="1.6" stroke-dasharray="6 5"/>
+            <!-- Radius-Hilfslinie -->
+            <line x1="${c.cx.toFixed(1)}" y1="${c.cy.toFixed(1)}" x2="${px.toFixed(1)}" y2="${py.toFixed(1)}" stroke="rgba(2, 132, 199, 0.5)" stroke-width="1.4" stroke-dasharray="4 4"/>
+            <!-- Linker Schenkel (Nadel-Schenkel) -->
+            <line x1="${hx.toFixed(1)}" y1="${hy.toFixed(1)}" x2="${c.cx.toFixed(1)}" y2="${c.cy.toFixed(1)}" stroke="#334155" stroke-width="8" stroke-linecap="round"/>
+            <line x1="${hx.toFixed(1)}" y1="${hy.toFixed(1)}" x2="${c.cx.toFixed(1)}" y2="${c.cy.toFixed(1)}" stroke="url(#compass-metal)" stroke-width="5" stroke-linecap="round"/>
+            <!-- Rechter Schenkel (Zeichen-Schenkel) -->
+            <line x1="${hx.toFixed(1)}" y1="${hy.toFixed(1)}" x2="${px.toFixed(1)}" y2="${py.toFixed(1)}" stroke="#334155" stroke-width="8" stroke-linecap="round"/>
+            <line x1="${hx.toFixed(1)}" y1="${hy.toFixed(1)}" x2="${px.toFixed(1)}" y2="${py.toFixed(1)}" stroke="url(#compass-metal)" stroke-width="5" stroke-linecap="round"/>
+            <!-- Farbige Mine an der Zeichenspitze -->
+            <circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="5" fill="${leadColor}" stroke="#ffffff" stroke-width="1.5"/>
+            <!-- Zirkelkopf (Griff oben + Gelenk) -->
+            <line x1="${hx.toFixed(1)}" y1="${(hy - 28).toFixed(1)}" x2="${hx.toFixed(1)}" y2="${hy.toFixed(1)}" stroke="#1e293b" stroke-width="7" stroke-linecap="round"/>
+            <line x1="${hx.toFixed(1)}" y1="${(hy - 26).toFixed(1)}" x2="${hx.toFixed(1)}" y2="${hy.toFixed(1)}" stroke="#94a3b8" stroke-width="3.5" stroke-linecap="round"/>
+            <circle cx="${hx.toFixed(1)}" cy="${hy.toFixed(1)}" r="12" fill="#334155" stroke="#e2e8f0" stroke-width="2.5"/>
+            <circle cx="${hx.toFixed(1)}" cy="${hy.toFixed(1)}" r="4.5" fill="#cbd5e1"/>
+            ${sweepBadge}
+        `;
+
+        // Griffe positionieren
+        DOM.compassCenterHandle.style.left = `${c.cx}px`;
+        DOM.compassCenterHandle.style.top = `${c.cy}px`;
+
+        DOM.compassDrawHandle.style.left = `${px}px`;
+        DOM.compassDrawHandle.style.top = `${py}px`;
+        DOM.compassDrawHandle.style.background = leadColor;
+
+        const radHandleDist = Math.max(38, c.radius * 0.52);
+        DOM.compassRadiusHandle.style.left = `${c.cx + radHandleDist * Math.cos(c.angleRad)}px`;
+        DOM.compassRadiusHandle.style.top = `${c.cy + radHandleDist * Math.sin(c.angleRad)}px`;
+
+        // Kompaktes HUD über der Zirkelspitze (im sichtbaren Seitenbereich halten)
+        const hudX = Math.max(150, Math.min(PAGE_WIDTH - 150, c.cx));
+        const hudY = Math.max(54, c.cy - 34);
+        DOM.compassHud.style.left = `${hudX}px`;
+        DOM.compassHud.style.top = `${hudY}px`;
+        DOM.compassRadiusBadge.textContent = `r = ${rCm} cm`;
+    }
+
+    function commitCompassStroke(stroke) {
+        const pageData = getCurrentPageData();
+        if (!pageData || !stroke || stroke.points.length < 2) return;
+        pageData.strokes.push(stroke);
+        drawSmoothStrokeOnContext(mainCtx, stroke);
+        hiCtx.clearRect(0, 0, PAGE_WIDTH, PAGE_HEIGHT);
+        uiCtx.clearRect(0, 0, PAGE_WIDTH, PAGE_HEIGHT);
+        triggerPageAutoSave();
+        scheduleThumbnailRefresh(AppState.currentPageIndex);
+    }
+
+    function drawCompassFullCircle() {
+        const c = AppState.compass;
+        const pageData = getCurrentPageData();
+        if (!pageData) return;
+
+        saveHistorySnapshot();
+        const mode = AppState.penSubMode === 'highlighter' ? 'highlighter' : 'ballpoint';
+        const steps = 180;
+        const points = [];
+        const now = performance.now();
+        for (let i = 0; i <= steps; i++) {
+            const a = c.angleRad + (i / steps) * Math.PI * 2;
+            points.push({
+                x: c.cx + c.radius * Math.cos(a),
+                y: c.cy + c.radius * Math.sin(a),
+                t: now + i
+            });
+        }
+        const circleStroke = {
+            id: 'str_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+            mode,
+            color: AppState.activeColor,
+            width: getCurrentStrokeWidth(),
+            points,
+            isSnappedLine: true
+        };
+        commitCompassStroke(circleStroke);
+    }
+
+    function initCompassInteractions() {
+        const compassEl = DOM.compassEl;
+        if (!compassEl) return;
+
+        const startHandleDrag = (mode, handleEl) => {
+            handleEl.addEventListener('pointerdown', (e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                handleEl.setPointerCapture(e.pointerId);
+                const pt = clientToPageCoordsRaw(e.clientX, e.clientY);
+                const c = AppState.compass;
+                c.mode = mode;
+                c.pointerId = e.pointerId;
+
+                if (mode === 'move') {
+                    c.dragOffsetX = pt.x - c.cx;
+                    c.dragOffsetY = pt.y - c.cy;
+                } else if (mode === 'draw') {
+                    saveHistorySnapshot();
+                    const startAngle = c.angleRad;
+                    c.lastDrawAngle = startAngle;
+                    c.totalSweepRad = 0;
+                    const strokeMode = AppState.penSubMode === 'highlighter' ? 'highlighter' : 'ballpoint';
+                    c.drawStroke = {
+                        id: 'str_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+                        mode: strokeMode,
+                        color: AppState.activeColor,
+                        width: getCurrentStrokeWidth(),
+                        points: [{
+                            x: c.cx + c.radius * Math.cos(startAngle),
+                            y: c.cy + c.radius * Math.sin(startAngle),
+                            t: performance.now()
+                        }],
+                        isSnappedLine: true
+                    };
+                }
+                renderCompassVisual();
+            });
+
+            handleEl.addEventListener('pointermove', (e) => {
+                const c = AppState.compass;
+                if (c.mode !== mode || c.pointerId !== e.pointerId) return;
+                e.stopPropagation();
+                e.preventDefault();
+                const pt = clientToPageCoordsRaw(e.clientX, e.clientY);
+
+                if (mode === 'move') {
+                    c.cx = Math.max(20, Math.min(PAGE_WIDTH - 20, pt.x - c.dragOffsetX));
+                    c.cy = Math.max(20, Math.min(PAGE_HEIGHT - 20, pt.y - c.dragOffsetY));
+                } else if (mode === 'radius') {
+                    const dist = Math.hypot(pt.x - c.cx, pt.y - c.cy);
+                    // Handle sitzt bei ~0.52 * radius -> beim Ziehen direkt am Finger ausrichten oder skaliert
+                    const targetR = Math.max(COMPASS_MIN_R, Math.min(COMPASS_MAX_R, dist / 0.52));
+                    // Sanftes Einrasten auf 0,1 cm
+                    c.radius = Math.round((targetR / PX_PER_CM) * 10) / 10 * PX_PER_CM;
+                    c.angleRad = Math.atan2(pt.y - c.cy, pt.x - c.cx);
+                } else if (mode === 'draw' && c.drawStroke) {
+                    const newAngle = Math.atan2(pt.y - c.cy, pt.x - c.cx);
+                    const delta = normalizeAngleDelta(newAngle - c.lastDrawAngle);
+                    if (Math.abs(delta) > 0.004) {
+                        const subSteps = Math.max(1, Math.ceil(Math.abs(delta) / 0.035));
+                        const now = performance.now();
+                        for (let i = 1; i <= subSteps; i++) {
+                            const a = c.lastDrawAngle + (delta * i) / subSteps;
+                            c.drawStroke.points.push({
+                                x: c.cx + c.radius * Math.cos(a),
+                                y: c.cy + c.radius * Math.sin(a),
+                                t: now
+                            });
+                        }
+                        c.lastDrawAngle = newAngle;
+                        c.angleRad = newAngle;
+                        c.totalSweepRad += delta;
+
+                        // Live-Vorschau des gezeichneten Kreisbogens
+                        if (c.drawStroke.mode === 'highlighter') {
+                            hiCtx.clearRect(0, 0, PAGE_WIDTH, PAGE_HEIGHT);
+                            drawSmoothStrokeOnContext(hiCtx, c.drawStroke);
+                        } else {
+                            uiCtx.clearRect(0, 0, PAGE_WIDTH, PAGE_HEIGHT);
+                            drawSmoothStrokeOnContext(uiCtx, c.drawStroke);
+                        }
+                    }
+                }
+                renderCompassVisual();
+            });
+
+            const endHandleDrag = (e) => {
+                const c = AppState.compass;
+                if (c.mode !== mode || c.pointerId !== e.pointerId) return;
+                if (mode === 'draw' && c.drawStroke) {
+                    const finished = c.drawStroke;
+                    c.drawStroke = null;
+                    commitCompassStroke(finished);
+                }
+                c.mode = null;
+                c.pointerId = null;
+                try { handleEl.releasePointerCapture(e.pointerId); } catch (_) {}
+                renderCompassVisual();
+            };
+
+            handleEl.addEventListener('pointerup', endHandleDrag);
+            handleEl.addEventListener('pointercancel', endHandleDrag);
+        };
+
+        startHandleDrag('move', DOM.compassCenterHandle);
+        startHandleDrag('radius', DOM.compassRadiusHandle);
+        startHandleDrag('draw', DOM.compassDrawHandle);
+
+        const btnMinus = document.getElementById('btn-compass-rad-minus');
+        const btnPlus = document.getElementById('btn-compass-rad-plus');
+        const btnFull = document.getElementById('btn-compass-full-circle');
+        const btnClose = document.getElementById('btn-compass-close');
+
+        if (btnMinus) {
+            btnMinus.addEventListener('click', (e) => {
+                e.stopPropagation();
+                AppState.compass.radius = Math.max(COMPASS_MIN_R, AppState.compass.radius - PX_PER_CM * 0.5);
+                renderCompassVisual();
+            });
+        }
+        if (btnPlus) {
+            btnPlus.addEventListener('click', (e) => {
+                e.stopPropagation();
+                AppState.compass.radius = Math.min(COMPASS_MAX_R, AppState.compass.radius + PX_PER_CM * 0.5);
+                renderCompassVisual();
+            });
+        }
+        if (btnFull) {
+            btnFull.addEventListener('click', (e) => {
+                e.stopPropagation();
+                drawCompassFullCircle();
+            });
+        }
+        if (btnClose) {
+            btnClose.addEventListener('click', (e) => {
+                e.stopPropagation();
+                AppState.compass.visible = false;
+                DOM.compassEl.classList.add('hidden');
+                const toggleBtn = document.getElementById('btn-toggle-compass');
+                if (toggleBtn) toggleBtn.classList.remove('active');
+            });
+        }
     }
 
     // =========================================================================
@@ -4972,6 +5681,28 @@
             updateRulerTransform();
         });
 
+        // Interaktives Geodreieck ein-/ausblenden
+        const btnToggleGeo = document.getElementById('btn-toggle-geodreieck');
+        if (btnToggleGeo) {
+            btnToggleGeo.addEventListener('click', (e) => {
+                AppState.geodreieck.visible = !AppState.geodreieck.visible;
+                DOM.geoEl.classList.toggle('hidden', !AppState.geodreieck.visible);
+                e.currentTarget.classList.toggle('active', AppState.geodreieck.visible);
+                updateGeodreieckTransform();
+            });
+        }
+
+        // Interaktiver Zirkel ein-/ausblenden
+        const btnToggleCompass = document.getElementById('btn-toggle-compass');
+        if (btnToggleCompass) {
+            btnToggleCompass.addEventListener('click', (e) => {
+                AppState.compass.visible = !AppState.compass.visible;
+                DOM.compassEl.classList.toggle('hidden', !AppState.compass.visible);
+                e.currentTarget.classList.toggle('active', AppState.compass.visible);
+                if (AppState.compass.visible) renderCompassVisual();
+            });
+        }
+
         // Sub-Bar: Kugelschreiber / Textmarker / Formen-Modus / Labor-Baukasten
         document.querySelectorAll('#pill-pen-modes .submode-btn').forEach(btn => {
             btn.addEventListener('click', () => {
@@ -5044,6 +5775,7 @@
                 AppState.activeColor = sw.dataset.color;
                 document.querySelectorAll('#pill-colors .color-swatch').forEach(s => s.classList.remove('active'));
                 sw.classList.add('active');
+                if (AppState.compass.visible) renderCompassVisual();
             });
         });
 
@@ -5054,6 +5786,7 @@
             customColorLabel.style.setProperty('--swatch-color', customColorInput.value);
             document.querySelectorAll('#pill-colors .color-swatch').forEach(s => s.classList.remove('active'));
             customColorLabel.classList.add('active');
+            if (AppState.compass.visible) renderCompassVisual();
         });
 
         // Radierer- & Formen-Suboptionen
@@ -5307,9 +6040,15 @@
         // Zoom-Buttons
         document.getElementById('btn-zoom-in').addEventListener('click', () => setZoom(AppState.viewZoom * 1.15));
         document.getElementById('btn-zoom-out').addEventListener('click', () => setZoom(AppState.viewZoom * 0.87));
-        document.getElementById('btn-zoom-reset').addEventListener('click', fitPageToViewport);
+        document.getElementById('btn-zoom-reset').addEventListener('click', () => fitPageToViewport());
         const btnFitWidth = document.getElementById('btn-zoom-fit-width');
         if (btnFitWidth) btnFitWidth.addEventListener('click', fitPageToWidth);
+        const btnCenterH = document.getElementById('btn-zoom-center-h');
+        if (btnCenterH) btnCenterH.addEventListener('click', centerPageHorizontally);
+        const btnCenterV = document.getElementById('btn-zoom-center-v');
+        if (btnCenterV) btnCenterV.addEventListener('click', centerPageVertically);
+        const btnZoomLock = document.getElementById('btn-zoom-lock');
+        if (btnZoomLock) btnZoomLock.addEventListener('click', () => setZoomLocked(!AppState.isZoomLocked));
 
         // Tastatur-Shortcuts (Strg+Z / Strg+Y / Entf / Leertaste für Maus-Panning)
         window.addEventListener('keydown', (e) => {
@@ -5407,6 +6146,8 @@
         initDOMReferences();
         initCanvasPointerEngine();
         initRulerInteractions();
+        initGeodreieckInteractions();
+        initCompassInteractions();
         bindUIEvents();
         updateWidthSlotUI();
         checkAuthAndBoot();

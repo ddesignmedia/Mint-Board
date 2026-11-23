@@ -234,6 +234,26 @@
                         </svg>
                     </button>
 
+                    <!-- 10b. Interaktives Geodreieck -->
+                    <button type="button" class="tool-btn" id="btn-toggle-geodreieck" title="Interaktives Geodreieck ein-/ausblenden (Winkelmesser, Parallelen &amp; Kanten-Einrasten)">
+                        <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polygon points="2 19 22 19 12 4"></polygon>
+                            <path d="M8.5 19a3.5 3.5 0 0 1 7 0"></path>
+                            <line x1="12" y1="19" x2="12" y2="12"></line>
+                        </svg>
+                    </button>
+
+                    <!-- 10c. Interaktiver Zirkel -->
+                    <button type="button" class="tool-btn" id="btn-toggle-compass" title="Interaktiver Zirkel ein-/ausblenden (Kreise &amp; Kreisbögen zeichnen)">
+                        <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="5" r="2"></circle>
+                            <line x1="12" y1="2" x2="12" y2="3"></line>
+                            <line x1="11" y1="7" x2="6" y2="21"></line>
+                            <line x1="13" y1="7" x2="18" y2="21"></line>
+                            <path d="M7.5 15.5a8 8 0 0 0 9 0"></path>
+                        </svg>
+                    </button>
+
                     <!-- 11. Schwebende Unterrichts-Widgets (Uhr / Stoppuhr / Countdown / Taschenrechner – nicht im PDF) -->
                     <button type="button" class="tool-btn" id="btn-toggle-widgets" title="Unterrichts-Widgets einfügen (Uhr, Stoppuhr, Countdown, Ampel, Taschenrechner – bleiben fest &amp; erscheinen nicht im PDF)">
                         <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -483,6 +503,34 @@
                             <div id="ruler-rotate-handle" class="ruler-rotate-handle" title="Ziehen zum Drehen des Lineals">↻</div>
                         </div>
 
+                        <!-- Interaktives Geodreieck (Verschieb- & drehbar um den Nullpunkt, mit Kanten-Einrasten) -->
+                        <div id="interactive-geodreieck" class="interactive-geodreieck hidden">
+                            <svg id="geodreieck-svg" class="geodreieck-svg" viewBox="0 0 852 426" width="852" height="426" aria-label="Interaktives Geodreieck"></svg>
+                            <div class="geodreieck-hud">
+                                <span id="geodreieck-angle-badge" class="geodreieck-angle-badge">0°</span>
+                                <button type="button" id="btn-geo-snap-angle" class="ruler-mini-btn" title="Winkel umschalten (0° / 45° / 90°)">0°/45°/90°</button>
+                                <button type="button" id="btn-geo-close" class="geo-close-btn" title="Geodreieck ausblenden">✕</button>
+                            </div>
+                            <div id="geodreieck-rotate-handle" class="geodreieck-rotate-handle" title="Ziehen zum Drehen um den Nullpunkt">↻</div>
+                        </div>
+
+                        <!-- Interaktiver Zirkel (Mittelpunkt verschieben, Radius einstellen, Kreisbögen & Vollkreise zeichnen) -->
+                        <div id="interactive-compass" class="interactive-compass hidden">
+                            <svg id="compass-svg" class="compass-svg" viewBox="0 0 1120 1584" width="1120" height="1584" aria-hidden="true"></svg>
+                            <div id="compass-center-handle" class="compass-handle compass-center-handle" title="Zirkelspitze (Mittelpunkt) verschieben">
+                                <span class="compass-pin-dot"></span>
+                            </div>
+                            <div id="compass-radius-handle" class="compass-handle compass-radius-handle" title="Radius ändern (Ziehen)">↔</div>
+                            <div id="compass-draw-handle" class="compass-handle compass-draw-handle" title="Ziehen zum Zeichnen eines Kreisbogens">✎</div>
+                            <div id="compass-hud" class="compass-hud">
+                                <button type="button" id="btn-compass-rad-minus" class="compass-hud-btn" title="Radius −0,5 cm">−</button>
+                                <span id="compass-radius-badge" class="compass-radius-badge">r = 3,0 cm</span>
+                                <button type="button" id="btn-compass-rad-plus" class="compass-hud-btn" title="Radius +0,5 cm">+</button>
+                                <button type="button" id="btn-compass-full-circle" class="compass-hud-btn compass-hud-primary" title="Vollkreis (360°) zeichnen">○ Kreis</button>
+                                <button type="button" id="btn-compass-close" class="compass-hud-btn compass-hud-close" title="Zirkel ausblenden">✕</button>
+                            </div>
+                        </div>
+
                         <!-- Schwebendes Lasso-Kontextmenü (erscheint über der Lasso-Bounding-Box) -->
                         <div id="lasso-floating-bar" class="lasso-floating-bar hidden">
                             <button type="button" id="lasso-btn-duplicate" class="lasso-action-btn" title="Auswahl duplizieren">Duplizieren</button>
@@ -537,7 +585,7 @@
                 </div>
 
                 <!-- Kompakte Zoom-Steuerung unten rechts (spart Platz in der grünen Kontext-Leiste für iPad) -->
-                <div class="zoom-controls palm-shield-zone">
+                <div id="zoom-controls" class="zoom-controls palm-shield-zone">
                     <button type="button" id="btn-zoom-out" class="zoom-btn" title="Verkleinern (-)">−</button>
                     <button type="button" id="btn-zoom-reset" class="zoom-readout" title="Ganze Seite einpassen">100%</button>
                     <button type="button" id="btn-zoom-in" class="zoom-btn" title="Vergrößern (+)">+</button>
@@ -549,6 +597,35 @@
                             <line x1="3" y1="12" x2="21" y2="12"></line>
                         </svg>
                         <span>Breite</span>
+                    </button>
+                    <button type="button" id="btn-zoom-center-h" class="zoom-icon-btn" title="Seite horizontal zentrieren">
+                        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <line x1="12" y1="4" x2="12" y2="20"></line>
+                            <polyline points="5 9 8 12 5 15"></polyline>
+                            <line x1="2" y1="12" x2="8" y2="12"></line>
+                            <polyline points="19 9 16 12 19 15"></polyline>
+                            <line x1="22" y1="12" x2="16" y2="12"></line>
+                        </svg>
+                    </button>
+                    <button type="button" id="btn-zoom-center-v" class="zoom-icon-btn" title="Seite vertikal zentrieren">
+                        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <line x1="4" y1="12" x2="20" y2="12"></line>
+                            <polyline points="9 5 12 8 15 5"></polyline>
+                            <line x1="12" y1="2" x2="12" y2="8"></line>
+                            <polyline points="9 19 12 16 15 19"></polyline>
+                            <line x1="12" y1="22" x2="12" y2="16"></line>
+                        </svg>
+                    </button>
+                    <span class="zoom-divider" aria-hidden="true"></span>
+                    <button type="button" id="btn-zoom-lock" class="zoom-lock-btn" aria-pressed="false" title="Zoom sperren (verhindert versehentliches Zoomen beim Touch-Scrollen)">
+                        <svg class="icon-unlocked" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <rect x="4" y="11" width="16" height="10" rx="2" ry="2"></rect>
+                            <path d="M8 11V7a4 4 0 0 1 7.4-2"></path>
+                        </svg>
+                        <svg class="icon-locked" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <rect x="4" y="11" width="16" height="10" rx="2" ry="2"></rect>
+                            <path d="M8 11V7a4 4 0 0 1 8 0v4"></path>
+                        </svg>
                     </button>
                 </div>
 
