@@ -63,6 +63,68 @@ Auf **GitHub Pages** startet Mint-Board automatisch im **lokalen Demo-Modus** (B
 
 ---
 
+## 💾 Portabler Betrieb auf einem USB-Stick (Windows)
+
+Mint-Board lässt sich komplett ohne Installation, ohne Admin-Rechte und ohne eigenen Webspace direkt von einem USB-Stick starten – ideal für wechselnde Lehrer-PCs im Klassenzimmer. Alle Hefte bleiben dabei direkt im Ordner `data/` auf dem Stick gespeichert.
+
+### 1. Portables PHP herunterladen
+1. Die offizielle Windows-Downloadseite öffnen: **[windows.php.net/download](https://windows.php.net/download/)**
+2. Bei der aktuellen **PHP 8.x**-Version das **ZIP-Archiv** für **x64 Thread Safe** (z. B. `VS17 x64 Thread Safe` → *Zip*) herunterladen. *(Es ist kein Installer nötig – PHP läuft komplett portabel aus dem entpackten Ordner.)*
+
+### 2. Ordnerstruktur auf dem USB-Stick anlegen
+Auf dem USB-Stick einen Ordner (z. B. `Mint-Board-Portable`) anlegen und wie folgt befüllen:
+
+```text
+USB-Stick:\Mint-Board-Portable\
+├── php\                  ← Inhalt des heruntergeladenen PHP-ZIP-Archivs hier entpacken
+├── app\                  ← Alle Mint-Board-Dateien (index.html, api.php, app.js, libs/, ...)
+└── Mint-Board-Start.bat  ← Start-Skript (wird in Schritt 4 erstellt)
+```
+
+### 3. `php.ini` für Uploads & Backups einrichten
+Damit Bilder, PDFs und die 1-Klick-ZIP-Backups problemlos funktionieren, muss PHP kurz konfiguriert werden:
+
+1. Im Ordner `php\` die Datei `php.ini-production` kopieren und die Kopie in **`php.ini`** umbenennen.
+2. `php.ini` mit dem Windows-Editor (Notepad) öffnen und folgende Zeilen suchen, das führende Semikolon `;` entfernen und die Werte anpassen:
+
+```ini
+extension_dir = "ext"
+extension=fileinfo
+extension=zip
+
+upload_max_filesize = 64M
+post_max_size = 64M
+memory_limit = 256M
+```
+
+3. Datei speichern und schließen.
+
+### 4. Start-Skript (`Mint-Board-Start.bat`) erstellen
+Im Hauptordner `Mint-Board-Portable\` eine neue Textdatei namens **`Mint-Board-Start.bat`** anlegen (darauf achten, dass die Endung wirklich `.bat` und nicht `.bat.txt` ist) und folgenden Inhalt speichern:
+
+```bat
+@echo off
+title Mint-Board (USB-Stick)
+echo Starte Mint-Board Server auf http://127.0.0.1:8080 ...
+echo Dieses Fenster waehrend der Nutzung einfach minimiert offen lassen.
+echo Zum Beenden dieses Fenster schliessen oder Strg+C druecken.
+echo.
+start "" http://127.0.0.1:8080
+"%~dp0php\php.exe" -c "%~dp0php\php.ini" -S 127.0.0.1:8080 -t "%~dp0app"
+```
+
+> **Warum `%~dp0`?** Dadurch funktioniert das Skript automatisch unabhängig davon, welchen Laufwerksbuchstaben (`D:`, `E:`, `F:` …) Windows dem USB-Stick am jeweiligen PC zuweist.
+
+### 5. Starten & Beenden
+* **Starten:** Doppelklick auf `Mint-Board-Start.bat`. Der lokale PHP-Server startet und öffnet Mint-Board automatisch im Browser *(falls der Browser schneller war als der Serverstart, einmal `F5` drücken)*.
+* **Beenden:** Nach dem Unterricht einfach das schwarze Konsolenfenster schließen und den USB-Stick über *„Hardware sicher entfernen“* auswerfen, damit alle Änderungen sauber auf den Stick geschrieben sind.
+
+> **Hinweise:**
+> * **Sicherheit:** Durch `127.0.0.1` ist der Server ausschließlich lokal auf dem jeweiligen PC erreichbar – andere Geräte im Schul-WLAN haben keinen Zugriff.
+> * **Fehlende DLL-Meldung:** Falls auf einem älteren PC beim Start eine Meldung über eine fehlende `VCRUNTIME140.dll` erscheint, wird einmalig die [Microsoft Visual C++ Redistributable (x64)](https://aka.ms/vs/17/release/vc_redist.x64.exe) auf dem Rechner benötigt (auf aktuellen Windows-10/11-PCs in der Regel bereits vorinstalliert).
+
+---
+
 ## 📋 Changelog
 
 ### `v0.0.4`
