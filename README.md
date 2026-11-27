@@ -11,7 +11,7 @@
 </p>
 
 <p align="center">
-  <a href="https://ddesignmedia.github.io/Mint-Board/">
+  <a href="https://ddesignmedia.github.io/webnotes/">
     <img src="https://img.shields.io/badge/🚀_Live_Demo_(GitHub_Pages)-Direkt_im_Browser_testen-2b579a?style=for-the-badge&logoColor=white" alt="Live Demo auf GitHub Pages">
   </a>
 </p>
@@ -22,7 +22,7 @@
 
 Auf **GitHub Pages** startet Mint-Board automatisch im **lokalen Demo-Modus** (Browser-Speicher / `localStorage`, ohne PHP-Server):
 
-👉 [**🌐 Mint-Board Live-Demo öffnen**](https://ddesignmedia.github.io/Mint-Board/)
+👉 [**🌐 Mint-Board Live-Demo öffnen**](https://ddesignmedia.github.io/webnotes/)
 
 * Alle Zeichen-, Text-, Labor-, Widget-, Bild- sowie PDF-Import- und Export-Funktionen können direkt getestet werden.
 * Neue Hefte und Änderungen werden lokal im Browser gespeichert (gerätespezifisch, ohne Cloud-Sync) – über **Einstellungen → Datensicherung** lassen sich alle Test-Hefte jederzeit als `.json`-Backup exportieren, wiederherstellen oder sogar auf einen eigenen PHP-Server übernehmen.
